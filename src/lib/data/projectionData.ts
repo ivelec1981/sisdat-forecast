@@ -1,4 +1,4 @@
-import { ProjectionData } from '@/types/dashboard';
+import { ProjectionData, HistoricalData, FutureProjection } from '@/types/dashboard';
 
 export const projectionData: ProjectionData = {
   residential: { Prophet: 3456.8, LSTM: 3289.2, GRU: 3124.5, BiLSTM: 3201.7, Econometric: 4789.3, Real2024: 3045.6 },
@@ -8,7 +8,7 @@ export const projectionData: ProjectionData = {
   others: { Prophet: 1234.6, LSTM: 876.4, GRU: 945.7, BiLSTM: 823.2, Econometric: 1156.4, Real2024: 1087.9 }
 };
 
-export const historicalData = [
+export const historicalData: HistoricalData[] = [
   { year: 2020, actual: 8500, prophet: 8456 },
   { year: 2021, actual: 8734, prophet: 8721 },
   { year: 2022, actual: 8912, prophet: 8934 },
@@ -16,7 +16,7 @@ export const historicalData = [
   { year: 2024, actual: 9345, prophet: 9367 }
 ];
 
-export const futureProjections = [
+export const futureProjections: FutureProjection[] = [
   { year: 2025, prophet: 9589 },
   { year: 2026, prophet: 9834 },
   { year: 2027, prophet: 10089 },

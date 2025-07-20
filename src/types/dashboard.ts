@@ -37,3 +37,14 @@ export interface IndustrialLoad {
   region: string;
   consumption: number;
 }
+
+export interface HistoricalData {
+  year: number;
+  actual: number;
+  prophet: number;
+}
+
+export interface FutureProjection {
+  year: number;
+  prophet: number;
+}
