@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -16,6 +16,12 @@ import { Station } from '@/types/dashboard';
 export default function SisdatForecastDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(0);
+
+  useEffect(() => {
+    setWindowWidth(window.innerWidth);
+  }, []);
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -25,10 +31,10 @@ export default function SisdatForecastDashboard() {
         return <ProjectionsTab projectionData={projectionData} />;
       case 'transmission-map':
         return (
-          <TransmissionMapTab 
-            transmissionData={transmissionData} 
-            selectedStation={selectedStation} 
-            setSelectedStation={setSelectedStation} 
+          <TransmissionMapTab
+            transmissionData={transmissionData}
+            selectedStation={selectedStation}
+            setSelectedStation={setSelectedStation}
           />
         );
       case 'single-line-diagram':
@@ -45,14 +51,64 @@ export default function SisdatForecastDashboard() {
     }
   };
 
+  const className = "bg-white text-black";
+
   return (
     <div className="min-h-screen bg-slate-50">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-      <div className="ml-64">
-        <Header activeTab={activeTab} />
-        <main className="p-6">
-          {renderTabContent()}
-        </main>
+      <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
+       
+        <div className="md:block hidden">
+          <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+        </div>
+        
+        {sidebarOpen && (
+          <div className="fixed inset-0 z-40 bg-black bg-opacity-40 flex">
+            <div className="bg-white w-64 h-full shadow-lg">
+              <Sidebar
+                activeTab={activeTab}
+                setActiveTab={(tab) => {
+                  setActiveTab(tab);
+                  setSidebarOpen(false);
+                }}
+                mobile
+              />
+            </div>
+            <div
+              className="flex-1"
+              onClick={() => setSidebarOpen(false)}
+              aria-label="Cerrar menú"
+            />
+          </div>
+        )}
+        <div className="flex-1 md:ml-64">
+          <div className="md:hidden flex items-center px-4 py-2 gap-2 bg-white rounded-lg shadow-sm">
+            <button
+              className="p-1 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Abrir menú"
+            >
+              <svg width="20" height="20" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 6h14M3 10h14M3 14h14"/>
+              </svg>
+            </button>
+            <span
+              className="text-lg font-semibold text-slate-900 truncate overflow-hidden whitespace-nowrap flex-1"
+              title={activeTab === 'overview' ? 'Proyecciones de Demanda' : activeTab === 'projections' ? 'Proyecciones de Demanda' : activeTab === 'transmission-map' ? 'Mapa de Transmisión' : activeTab === 'single-line-diagram' ? 'Diagrama Unifilar' : activeTab === 'documentation' ? 'Documentación' : 'Sección en Desarrollo'}
+            >
+              {activeTab === 'overview' && 'Proyecciones de Demanda'}
+              {activeTab === 'projections' && 'Proyecciones de Demanda'}
+              {activeTab === 'transmission-map' && 'Mapa de Transmisión'}
+              {activeTab === 'single-line-diagram' && 'Diagrama Unifilar'}
+              {activeTab === 'documentation' && 'Documentación'}
+            </span>
+          </div>
+          <div className="hidden md:block">
+            <Header activeTab={activeTab} />
+          </div>
+          <main className="p-2 md:p-6">
+            {renderTabContent()}
+          </main>
+        </div>
       </div>
     </div>
   );
