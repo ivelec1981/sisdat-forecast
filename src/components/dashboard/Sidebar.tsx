@@ -6,7 +6,9 @@ import { TrendingUp, BarChart3, Map, Activity, BookOpen } from 'lucide-react';
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  mobile?: boolean;
 }
+
 
 export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
   const menuItems = [
