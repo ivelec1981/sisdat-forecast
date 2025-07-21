@@ -1,5 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Optimizaciones para componentes
+  experimental: {
+    optimizePackageImports: ['recharts', 'lucide-react'],
+  },
+  
+  // Configuración de imágenes
   images: {
     remotePatterns: [
       {
@@ -10,14 +16,12 @@ const nextConfig = {
       },
     ],
   },
-  experimental: {
-    optimizePackageImports: ['recharts', 'lucide-react'],
-  },
-  // Optimizaciones para Vercel
+  
+  // Optimizaciones generales
   compress: true,
   poweredByHeader: false,
-  generateEtags: false,
-  // Configuración para mapas
+  
+  // Headers de seguridad (opcional si no usas vercel.json)
   async headers() {
     return [
       {
