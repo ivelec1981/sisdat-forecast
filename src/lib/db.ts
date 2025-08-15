@@ -151,7 +151,7 @@ export class DatabaseService {
         level,
         message,
         component,
-        metadata: metadata ? JSON.stringify(metadata) : null
+        metadata: metadata ? JSON.stringify(metadata) : undefined
       }
     });
   }

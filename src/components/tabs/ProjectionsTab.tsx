@@ -163,14 +163,17 @@ export default function ProjectionsTab() {
                 ]} 
               />
               <Line 
+                key="projection-line"
                 type="monotone" 
                 dataKey="value" 
                 stroke="#3B82F6" 
                 strokeWidth={2}
                 dot={(props) => {
                   const isHistorical = props.payload?.type === 'historical';
+                  const uniqueKey = `dot-${props.payload?.year || 'unknown'}-${props.payload?.value || 'default'}-${isHistorical ? 'hist' : 'pred'}`;
                   return (
                     <circle 
+                      key={uniqueKey}
                       cx={props.cx} 
                       cy={props.cy} 
                       r={4}
@@ -207,6 +210,7 @@ export default function ProjectionsTab() {
                 labelFormatter={(label) => MODEL_LABELS[label] || label}
               />
               <Bar 
+                key="comparison-bar"
                 dataKey="value" 
                 fill="#3B82F6"
                 radius={[4, 4, 0, 0]}
