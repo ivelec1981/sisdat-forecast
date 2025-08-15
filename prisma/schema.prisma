@@ -6,8 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 // Modelo para empresas distribuidoras
@@ -114,4 +114,32 @@ model SystemLog {
   createdAt   DateTime @default(now())
   
   @@map("system_logs")
+}
+
+// Modelo específico para datos residenciales basado en estructura Excel
+model ResidentialData {
+  id              Int      @id @default(autoincrement())
+  powerCompany    String   // empresa eléctrica
+  date            DateTime // fecha del registro
+  type            String   // tipo de dato (ej: residential)
+  
+  // Datos de energía por modelo (MWh)
+  enerComb        Float?   // energía combinada
+  enerProphet     Float?   // energía predicha por Prophet
+  enerGru         Float?   // energía predicha por GRU
+  enerWavenet     Float?   // energía predicha por WaveNet
+  enerGbr         Float?   // energía predicha por GBR
+  
+  // Datos de potencia por modelo (MW)
+  potComb         Float?   // potencia combinada
+  potProphet      Float?   // potencia predicha por Prophet
+  potGbr          Float?   // potencia predicha por GBR
+  potGru          Float?   // potencia predicha por GRU
+  potWavenet      Float?   // potencia predicha por WaveNet
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([powerCompany, date, type])
+  @@map("residential_data")
 }

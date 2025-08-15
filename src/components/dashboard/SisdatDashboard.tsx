@@ -17,6 +17,7 @@ export default function SisdatForecastDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const handleSidebarToggle = useCallback(() => {
     setSidebarOpen(prev => !prev);
@@ -24,6 +25,10 @@ export default function SisdatForecastDashboard() {
 
   const handleSidebarClose = useCallback(() => {
     setSidebarOpen(false);
+  }, []);
+
+  const handleSidebarToggleCollapse = useCallback(() => {
+    setSidebarCollapsed(prev => !prev);
   }, []);
 
   const renderTabContent = useCallback(() => {
@@ -46,9 +51,9 @@ export default function SisdatForecastDashboard() {
         return <DocumentationTab />;
       default:
         return (
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Sección en Desarrollo</h3>
-            <p className="text-slate-600">Esta funcionalidad estará disponible próximamente.</p>
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Sección en Desarrollo</h3>
+            <p className="text-slate-600 dark:text-slate-300">Esta funcionalidad estará disponible próximamente.</p>
           </div>
         );
     }
@@ -56,16 +61,21 @@ export default function SisdatForecastDashboard() {
 
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col md:flex-row">
        
         <div className="md:block hidden">
-          <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+          <Sidebar 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab}
+            isCollapsed={sidebarCollapsed}
+            onToggleCollapse={handleSidebarToggleCollapse}
+          />
         </div>
         
         {sidebarOpen && (
           <div className="fixed inset-0 z-40 bg-black bg-opacity-40 flex">
-            <div className="bg-white w-64 h-full shadow-lg">
+            <div className="bg-white dark:bg-slate-900 w-64 h-full shadow-lg">
               <Sidebar
                 activeTab={activeTab}
                 setActiveTab={(tab) => {
@@ -82,10 +92,12 @@ export default function SisdatForecastDashboard() {
             />
           </div>
         )}
-        <div className="flex-1 md:ml-64">
-          <div className="md:hidden flex items-center px-4 py-2 gap-2 bg-white rounded-lg shadow-sm">
+        <div className={`flex-1 transition-all duration-300 ${
+          sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'
+        }`}>
+          <div className="md:hidden flex items-center px-4 py-2 gap-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm">
             <button
-              className="p-1 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none"
+              className="p-1 flex items-center text-slate-400 hover:text-slate-600 dark:text-slate-300 dark:hover:text-slate-100 focus:outline-none"
               onClick={handleSidebarToggle}
               aria-label="Abrir menú"
             >
@@ -94,7 +106,7 @@ export default function SisdatForecastDashboard() {
               </svg>
             </button>
             <span
-              className="text-lg font-semibold text-slate-900 truncate overflow-hidden whitespace-nowrap flex-1"
+              className="text-lg font-semibold text-slate-900 dark:text-slate-100 truncate overflow-hidden whitespace-nowrap flex-1"
               title={activeTab === 'overview' ? 'Proyecciones de Demanda' : activeTab === 'projections' ? 'Proyecciones de Demanda' : activeTab === 'transmission-map' ? 'Cargas Singulares' : activeTab === 'single-line-diagram' ? 'Diagrama Unifilar' : activeTab === 'documentation' ? 'Documentación' : 'Sección en Desarrollo'}
             >
               {activeTab === 'overview' && 'Proyecciones de Demanda'}

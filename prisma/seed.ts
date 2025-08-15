@@ -105,8 +105,7 @@ async function main() {
   for (let i = 0; i < energyRecords.length; i += batchSize) {
     const batch = energyRecords.slice(i, i + batchSize);
     await prisma.energyRecord.createMany({
-      data: batch,
-      skipDuplicates: true
+      data: batch
     });
   }
 
