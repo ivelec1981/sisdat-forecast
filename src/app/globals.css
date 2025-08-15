@@ -26,3 +26,172 @@ body {
   }
 }
 /* Test auto-deploy */
+
+/* ===== ESTILOS PARA LEAFLET ===== */
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  z-index: 0;
+  font-family: inherit;
+}
+
+/* Fix para iconos personalizados */
+.custom-div-icon {
+  background: none !important;
+  border: none !important;
+}
+
+/* Estilos mejorados para popups */
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e5e7eb;
+}
+
+.leaflet-popup-content {
+  margin: 8px 12px;
+  font-family: inherit;
+  line-height: 1.4;
+  font-size: 14px;
+}
+
+.leaflet-popup-tip {
+  background: white;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Animaciones para marcadores */
+.custom-div-icon div {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.custom-div-icon:hover div {
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Controles del mapa mejorados */
+.leaflet-control-zoom {
+  border: none !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.leaflet-control-zoom a {
+  background-color: white !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #374151 !important;
+  font-weight: bold !important;
+  transition: all 0.2s ease !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  transform: scale(1.05);
+}
+
+/* Atribución mejorada */
+.leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.9) !important;
+  font-size: 10px !important;
+  border-radius: 4px !important;
+}
+
+/* ===== ESTILOS RESPONSIVOS ===== */
+@media (max-width: 768px) {
+  .leaflet-popup-content-wrapper {
+    max-width: 250px;
+  }
+  
+  .leaflet-popup-content {
+    margin: 6px 8px;
+    font-size: 12px;
+  }
+  
+  .leaflet-control-zoom a {
+    width: 35px !important;
+    height: 35px !important;
+    line-height: 35px !important;
+  }
+}
+
+/* ===== TEMA OSCURO ===== */
+@media (prefers-color-scheme: dark) {
+  .leaflet-popup-content-wrapper {
+    background: #374151;
+    color: #f9fafb;
+    border-color: #4b5563;
+  }
+  
+  .leaflet-popup-tip {
+    background: #374151;
+    border-color: #4b5563;
+  }
+  
+  .leaflet-control-zoom a {
+    background-color: #374151 !important;
+    border-color: #4b5563 !important;
+    color: #f9fafb !important;
+  }
+  
+  .leaflet-control-zoom a:hover {
+    background-color: #4b5563 !important;
+    border-color: #6b7280 !important;
+  }
+  
+  .leaflet-control-attribution {
+    background: rgba(55, 65, 81, 0.9) !important;
+    color: #f9fafb !important;
+  }
+}
+
+/* ===== LOADING Y ESTADOS ===== */
+.map-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(248, 250, 252, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  border-radius: 8px;
+}
+
+/* ===== FIXES ADICIONALES ===== */
+.leaflet-marker-icon {
+  margin-left: -12px !important;
+  margin-top: -41px !important;
+}
+
+.leaflet-div-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* ===== MEJORAS DE PERFORMANCE ===== */
+.leaflet-zoom-anim .leaflet-zoom-animated {
+  will-change: transform;
+}
+
+.custom-div-icon div {
+  will-change: transform;
+}
+
+/* ===== ESTILOS PARA LA LEYENDA ===== */
+.map-legend {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid #e5e7eb;
+}
+
+@media (prefers-color-scheme: dark) {
+  .map-legend {
+    background: rgba(55, 65, 81, 0.95);
+    border-color: #4b5563;
+    color: #f9fafb;
+  }
+}

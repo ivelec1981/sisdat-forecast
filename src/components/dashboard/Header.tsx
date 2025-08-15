@@ -12,7 +12,7 @@ export default function Header({ activeTab }: HeaderProps) {
     switch (activeTab) {
       case 'overview': return 'Resumen General';
       case 'projections': return 'Proyecciones de Demanda';
-      case 'transmission-map': return 'Mapa de Transmisión';
+      case 'transmission-map': return 'Cargas Singulares';
       case 'single-line-diagram': return 'Diagrama Unifilar';
       case 'documentation': return 'Documentación';
       default: return 'Dashboard';

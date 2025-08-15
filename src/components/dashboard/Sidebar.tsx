@@ -14,7 +14,7 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
   const menuItems = [
     { id: 'overview', label: 'Resumen', icon: TrendingUp },
     { id: 'projections', label: 'Proyecciones', icon: BarChart3 },
-    { id: 'transmission-map', label: 'Mapa de Transmisión', icon: Map },
+    { id: 'transmission-map', label: 'Cargas Singulares', icon: Map },
     { id: 'single-line-diagram', label: 'Diagrama Unifilar', icon: Activity },
     { id: 'documentation', label: 'Documentación', icon: BookOpen },
   ];

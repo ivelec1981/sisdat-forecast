@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useCallback } from 'react';
 
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -17,18 +17,21 @@ export default function SisdatForecastDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [windowWidth, setWindowWidth] = useState(0);
 
-  useEffect(() => {
-    setWindowWidth(window.innerWidth);
+  const handleSidebarToggle = useCallback(() => {
+    setSidebarOpen(prev => !prev);
   }, []);
 
-  const renderTabContent = () => {
+  const handleSidebarClose = useCallback(() => {
+    setSidebarOpen(false);
+  }, []);
+
+  const renderTabContent = useCallback(() => {
     switch (activeTab) {
       case 'overview':
         return <OverviewTab projectionData={projectionData} />;
       case 'projections':
-        return <ProjectionsTab projectionData={projectionData} />;
+        return <ProjectionsTab />;
       case 'transmission-map':
         return (
           <TransmissionMapTab
@@ -49,9 +52,8 @@ export default function SisdatForecastDashboard() {
           </div>
         );
     }
-  };
+  }, [activeTab, selectedStation, projectionData, transmissionData]);
 
-  const className = "bg-white text-black";
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -68,14 +70,14 @@ export default function SisdatForecastDashboard() {
                 activeTab={activeTab}
                 setActiveTab={(tab) => {
                   setActiveTab(tab);
-                  setSidebarOpen(false);
+                  handleSidebarClose();
                 }}
                 mobile
               />
             </div>
             <div
               className="flex-1"
-              onClick={() => setSidebarOpen(false)}
+              onClick={handleSidebarClose}
               aria-label="Cerrar menú"
             />
           </div>
@@ -84,7 +86,7 @@ export default function SisdatForecastDashboard() {
           <div className="md:hidden flex items-center px-4 py-2 gap-2 bg-white rounded-lg shadow-sm">
             <button
               className="p-1 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none"
-              onClick={() => setSidebarOpen(true)}
+              onClick={handleSidebarToggle}
               aria-label="Abrir menú"
             >
               <svg width="20" height="20" fill="none" stroke="currentColor">
@@ -93,11 +95,11 @@ export default function SisdatForecastDashboard() {
             </button>
             <span
               className="text-lg font-semibold text-slate-900 truncate overflow-hidden whitespace-nowrap flex-1"
-              title={activeTab === 'overview' ? 'Proyecciones de Demanda' : activeTab === 'projections' ? 'Proyecciones de Demanda' : activeTab === 'transmission-map' ? 'Mapa de Transmisión' : activeTab === 'single-line-diagram' ? 'Diagrama Unifilar' : activeTab === 'documentation' ? 'Documentación' : 'Sección en Desarrollo'}
+              title={activeTab === 'overview' ? 'Proyecciones de Demanda' : activeTab === 'projections' ? 'Proyecciones de Demanda' : activeTab === 'transmission-map' ? 'Cargas Singulares' : activeTab === 'single-line-diagram' ? 'Diagrama Unifilar' : activeTab === 'documentation' ? 'Documentación' : 'Sección en Desarrollo'}
             >
               {activeTab === 'overview' && 'Proyecciones de Demanda'}
               {activeTab === 'projections' && 'Proyecciones de Demanda'}
-              {activeTab === 'transmission-map' && 'Mapa de Transmisión'}
+              {activeTab === 'transmission-map' && 'Cargas Singulares'}
               {activeTab === 'single-line-diagram' && 'Diagrama Unifilar'}
               {activeTab === 'documentation' && 'Documentación'}
             </span>
