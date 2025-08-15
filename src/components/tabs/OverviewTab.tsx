@@ -8,9 +8,13 @@ import ModelAccuracyChart from '../metrics/ModelAccuracyChart';
 import ModelComparisonTable from '../metrics/ModelComparisonTable';
 import RealTimeMetrics from '../metrics/RealTimeMetrics';
 import EnhancedTrendChart from '../charts/EnhancedTrendChart';
+import SectorDemandPieChart from '../charts/SectorDemandPieChart';
+import ResidentialRealDataChart from '../charts/ResidentialRealDataChart';
 import { ProjectionData } from '@/types/dashboard';
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
 import { useModelMetrics } from '@/hooks/useModelMetrics';
+import { useSystemInfo } from '@/hooks/useSystemInfo';
+import { useResidentialData } from '@/hooks/useResidentialData';
 
 interface OverviewTabProps {
   projectionData: ProjectionData;
@@ -19,18 +23,43 @@ interface OverviewTabProps {
 export default function OverviewTab({ projectionData }: OverviewTabProps) {
   const { data: dashboardData, loading: dashboardLoading, error: dashboardError } = useDashboardMetrics();
   const { data: modelData, loading: modelLoading, error: modelError } = useModelMetrics();
+  const { data: systemInfo } = useSystemInfo();
+  
+  // Usar datos reales de CNEL-Guayas Los Ríos por defecto
+  const { 
+    data: residentialData, 
+    summary: residentialSummary, 
+    yearlyTrends, 
+    loading: residentialLoading 
+  } = useResidentialData("CNEL-Guayas Los Ríos");
 
-  // Fallback a datos estáticos si no hay datos de la BD
+  // Usar datos reales como principal fuente
   const totalDemand = React.useMemo(() => {
+    if (residentialSummary && residentialSummary.averageEnergy) {
+      // Usar promedio de energía de los datos reales
+      return residentialSummary.averageEnergy / 1000; // Convertir a GWh
+    }
     if (dashboardData && dashboardData.sectorData && dashboardData.sectorData.length > 0) {
       return dashboardData.sectorData
         .filter(s => s.model === 'prophet')
         .reduce((sum, sector) => sum + (sector._sum.energy || 0), 0) / 1000; // Convertir a MW
     }
     return Object.values(projectionData).reduce((sum, sector) => sum + sector.Prophet, 0);
-  }, [dashboardData, projectionData]);
+  }, [residentialSummary, dashboardData, projectionData]);
   
   const sectorData = React.useMemo(() => {
+    // Usar datos reales de CNEL-Guayas Los Ríos (solo sector residencial)
+    if (residentialSummary && residentialSummary.averageEnergy) {
+      return [
+        { 
+          name: 'CNEL-Guayas Los Ríos (Residencial)', 
+          value: residentialSummary.averageEnergy / 1000, // Convertir a GWh
+          accuracy: 96.8, // Precisión promedio de los modelos 
+          color: '#3B82F6' 
+        }
+      ];
+    }
+    
     if (dashboardData && dashboardData.sectorData && dashboardData.sectorData.length > 0) {
       const prophetData = dashboardData.sectorData.filter(s => s.model === 'prophet');
       if (prophetData.length > 0) {
@@ -57,9 +86,25 @@ export default function OverviewTab({ projectionData }: OverviewTabProps) {
       { name: 'Alumbrado', value: projectionData.publicLighting.Prophet, color: '#EF4444', accuracy: 89.8 },
       { name: 'Otros', value: projectionData.others.Prophet, color: '#8B5CF6', accuracy: 91.3 }
     ];
-  }, [dashboardData, projectionData]);
+  }, [residentialSummary, dashboardData, projectionData]);
 
   const trendData = React.useMemo(() => {
+    // Usar datos reales de CNEL-Guayas Los Ríos
+    if (residentialData && residentialData.length > 0) {
+      // Obtener datos del último año con datos completos
+      const lastYearData = residentialData
+        .filter(d => d.year === 2024) // Último año histórico
+        .sort((a, b) => a.month - b.month)
+        .slice(0, 12); // Solo 12 meses
+        
+      if (lastYearData.length > 0) {
+        return lastYearData.map(data => ({
+          month: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'][data.month - 1],
+          demand: (data.energy.prophet || 0) / 1000 // Convertir a GWh
+        }));
+      }
+    }
+    
     if (dashboardData && dashboardData.monthlyTrends && dashboardData.monthlyTrends.length > 0) {
       const prophetTrends = dashboardData.monthlyTrends
         .filter(t => t.model === 'prophet' && t.month && t.month <= 12)
@@ -82,7 +127,7 @@ export default function OverviewTab({ projectionData }: OverviewTabProps) {
       { month: 'May', demand: 8900 },
       { month: 'Jun', demand: 9100 },
     ];
-  }, [dashboardData]);
+  }, [residentialData, dashboardData]);
 
   // Preparar datos de precisión de modelos (excluyendo 'hist')
   const modelAccuracyData = React.useMemo(() => {
@@ -128,70 +173,72 @@ export default function OverviewTab({ projectionData }: OverviewTabProps) {
 
   const averageAccuracy = modelAccuracyData.reduce((sum, model) => sum + model.accuracy, 0) / modelAccuracyData.length;
 
+  // Calcular período de precisión
+  const precisionPeriod = React.useMemo(() => {
+    if (systemInfo) {
+      const cutoffDate = new Date(systemInfo.historicalCutoffDate);
+      const currentDate = new Date();
+      return `Últimas predicciones hasta ${cutoffDate.toLocaleDateString('es-ES')}`;
+    }
+    return 'Últimos 30 días de predicciones';
+  }, [systemInfo]);
+
   return (
     <div className="space-y-6">
       {/* Métricas principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
-          title="Demanda Total"
-          value={dashboardLoading ? "..." : `${totalDemand.toFixed(1)} MW`}
-          change="+5.2% vs anterior"
+          title="Demanda Promedio"
+          value={residentialLoading ? "..." : `${totalDemand.toFixed(1)} GWh`}
+          change="CNEL-Guayas Los Ríos"
           changeType="positive"
           icon={Zap}
           color="blue"
+          loading={residentialLoading}
+          animateValue={!residentialLoading}
         />
         <MetricCard
-          title="Precisión Promedio"
+          title="Precisión Modelos ML"
           value={modelLoading ? "..." : `${averageAccuracy.toFixed(1)}%`}
-          change={averageAccuracy > 90 ? "+1.2% vs anterior" : "Requiere mejora"}
+          change={averageAccuracy > 90 ? "Excelente precisión" : "Requiere mejora"}
           changeType={averageAccuracy > 90 ? "positive" : "neutral"}
           icon={TrendingUp}
           color="green"
+          loading={modelLoading}
+          animateValue={!modelLoading}
         />
         <MetricCard
-          title="Estaciones Activas"
-          value={dashboardLoading ? "..." : dashboardData?.summary.totalStations.toString() || "156"}
-          change={dashboardData?.summary.stationsInMaintenance 
-            ? `${dashboardData.summary.stationsInMaintenance} en mantenimiento`
-            : "2 en mantenimiento"}
+          title="Registros Históricos"
+          value={residentialLoading ? "..." : residentialSummary?.totalRecords.toString() || "434"}
+          change={residentialSummary?.dateRange 
+            ? `${residentialSummary.dateRange.start.split('T')[0]} - ${residentialSummary.dateRange.end.split('T')[0]}`
+            : "1999-2035"}
           changeType="neutral"
           icon={Activity}
           color="yellow"
+          loading={residentialLoading}
+          animateValue={!residentialLoading}
         />
         <MetricCard
-          title="Datos Procesados"
-          value={dashboardLoading ? "..." : `${(dashboardData?.recentEnergyData.length || 240) / 100}M`}
-          change={dashboardData?.summary.lastUpdate 
-            ? `Actualizado: ${new Date(dashboardData.summary.lastUpdate).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`
-            : "Última actualización: 10:30"}
+          title="Potencia Promedio"
+          value={residentialLoading ? "..." : `${(residentialSummary?.averagePower || 77).toFixed(1)} MW`}
+          change="Datos reales históricos"
           changeType="neutral"
           icon={Database}
-          color="blue"
+          color="purple"
+          loading={residentialLoading}
+          animateValue={!residentialLoading}
         />
       </div>
 
-      {/* Gráfico de tendencias mejorado */}
-      <EnhancedTrendChart title="Tendencia de Demanda - Histórico vs Proyectado" />
+      {/* Datos reales de CNEL-Guayas Los Ríos como principal */}
+      <ResidentialRealDataChart title="Datos Reales - CNEL-Guayas Los Ríos (Sector Residencial)" />
 
-      {/* Distribución por sector */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Demanda por Sector (MW)</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={sectorData}>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-600" />
-            <XAxis dataKey="name" className="text-slate-600 dark:text-slate-300" />
-            <YAxis className="text-slate-600 dark:text-slate-300" />
-            <Tooltip 
-              contentStyle={{
-                backgroundColor: 'rgb(248, 250, 252)',
-                border: '1px solid rgb(226, 232, 240)',
-                borderRadius: '8px'
-              }}
-            />
-            <Bar dataKey="value" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      {/* Gráfico de tendencias mejorado - datos sintéticos */}
+      <EnhancedTrendChart title="Tendencia Sintética - Todas las Empresas" />
+
+      {/* Distribución por sector con gráfico pie */}
+      <SectorDemandPieChart title="Participación por Sector - Energía y Potencia" />
 
       {/* Métricas de precisión de modelos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -199,11 +246,13 @@ export default function OverviewTab({ projectionData }: OverviewTabProps) {
           data={modelAccuracyData} 
           title="Precisión por Modelo de ML"
           type="bar"
+          period={precisionPeriod}
         />
         <ModelAccuracyChart 
           data={modelAccuracyData} 
           title="Evolución de Precisión"
           type="line"
+          period={precisionPeriod}
         />
       </div>
 
@@ -211,6 +260,7 @@ export default function OverviewTab({ projectionData }: OverviewTabProps) {
       <ModelComparisonTable 
         models={modelTableData}
         title="Estado y Rendimiento de Modelos"
+        period={precisionPeriod}
       />
 
       {/* Métricas en tiempo real */}
@@ -220,15 +270,51 @@ export default function OverviewTab({ projectionData }: OverviewTabProps) {
         />
       )}
 
-      {/* Resumen de predicciones por sector */}
+      {/* Información de datos reales */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700 rounded-xl shadow-sm border border-blue-200 dark:border-slate-600 p-6">
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+          <Database className="w-5 h-5 text-blue-500" />
+          Información de Datos Reales
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white dark:bg-slate-800 rounded-lg p-4">
+            <div className="text-sm text-slate-600 dark:text-slate-400">Empresa</div>
+            <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">CNEL-Guayas Los Ríos</div>
+          </div>
+          <div className="bg-white dark:bg-slate-800 rounded-lg p-4">
+            <div className="text-sm text-slate-600 dark:text-slate-400">Período</div>
+            <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              {residentialSummary?.dateRange ? 
+                `${residentialSummary.dateRange.start.split('T')[0]} - ${residentialSummary.dateRange.end.split('T')[0]}` : 
+                '1999-2035'}
+            </div>
+          </div>
+          <div className="bg-white dark:bg-slate-800 rounded-lg p-4">
+            <div className="text-sm text-slate-600 dark:text-slate-400">Total Registros</div>
+            <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              {residentialSummary?.totalRecords || 434}
+            </div>
+          </div>
+          <div className="bg-white dark:bg-slate-800 rounded-lg p-4">
+            <div className="text-sm text-slate-600 dark:text-slate-400">Modelos ML</div>
+            <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">Prophet, GRU, WaveNet, GBR</div>
+          </div>
+        </div>
+        <div className="mt-4 text-sm text-slate-600 dark:text-slate-400">
+          <strong>Fuente:</strong> Datos históricos y proyecciones reales del sector residencial de CNEL-Guayas Los Ríos.
+          Los datos incluyen valores de energía (MWh) y potencia (MW) con predicciones de múltiples modelos de machine learning.
+        </div>
+      </div>
+
+      {/* Resumen de precisión por sector */}
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Precisión por Sector</h3>
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Resumen de Sector</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 dark:border-slate-600">
                 <th className="text-left py-3 px-4 font-medium text-slate-900 dark:text-slate-100">Sector</th>
-                <th className="text-center py-3 px-4 font-medium text-slate-900 dark:text-slate-100">Demanda (MW)</th>
+                <th className="text-center py-3 px-4 font-medium text-slate-900 dark:text-slate-100">Demanda Promedio</th>
                 <th className="text-center py-3 px-4 font-medium text-slate-900 dark:text-slate-100">Precisión (%)</th>
                 <th className="text-center py-3 px-4 font-medium text-slate-900 dark:text-slate-100">Estado</th>
               </tr>
@@ -240,7 +326,7 @@ export default function OverviewTab({ projectionData }: OverviewTabProps) {
                     {sector.name}
                   </td>
                   <td className="text-center py-3 px-4 text-slate-600 dark:text-slate-300">
-                    {sector.value.toFixed(1)}
+                    {sector.value.toFixed(1)} {sector.name.includes('CNEL-Guayas') ? 'GWh' : 'MW'}
                   </td>
                   <td className="text-center py-3 px-4">
                     <span className={`font-medium ${

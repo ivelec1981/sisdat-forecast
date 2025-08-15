@@ -16,11 +16,13 @@ interface ModelData {
 interface ModelComparisonTableProps {
   models: ModelData[];
   title?: string;
+  period?: string;
 }
 
 export default function ModelComparisonTable({ 
   models, 
-  title = "Comparación de Modelos" 
+  title = "Comparación de Modelos",
+  period = "Período no especificado"
 }: ModelComparisonTableProps) {
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A';
@@ -61,7 +63,12 @@ export default function ModelComparisonTable({
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-      <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">{title}</h3>
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h3>
+        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full mt-2 lg:mt-0">
+          {period}
+        </span>
+      </div>
       
       <div className="overflow-x-auto">
         <table className="w-full text-sm">

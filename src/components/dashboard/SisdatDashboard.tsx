@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -32,31 +33,49 @@ export default function SisdatForecastDashboard() {
   }, []);
 
   const renderTabContent = useCallback(() => {
-    switch (activeTab) {
-      case 'overview':
-        return <OverviewTab projectionData={projectionData} />;
-      case 'projections':
-        return <ProjectionsTab />;
-      case 'transmission-map':
-        return (
-          <TransmissionMapTab
-            transmissionData={transmissionData}
-            selectedStation={selectedStation}
-            setSelectedStation={setSelectedStation}
-          />
-        );
-      case 'single-line-diagram':
-        return <SingleLineDiagramTab />;
-      case 'documentation':
-        return <DocumentationTab />;
-      default:
-        return (
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Sección en Desarrollo</h3>
-            <p className="text-slate-600 dark:text-slate-300">Esta funcionalidad estará disponible próximamente.</p>
-          </div>
-        );
-    }
+    const content = (() => {
+      switch (activeTab) {
+        case 'overview':
+          return <OverviewTab projectionData={projectionData} />;
+        case 'projections':
+          return <ProjectionsTab />;
+        case 'transmission-map':
+          return (
+            <TransmissionMapTab
+              transmissionData={transmissionData}
+              selectedStation={selectedStation}
+              setSelectedStation={setSelectedStation}
+            />
+          );
+        case 'single-line-diagram':
+          return <SingleLineDiagramTab />;
+        case 'documentation':
+          return <DocumentationTab />;
+        default:
+          return (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6"
+            >
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Sección en Desarrollo</h3>
+              <p className="text-slate-600 dark:text-slate-300">Esta funcionalidad estará disponible próximamente.</p>
+            </motion.div>
+          );
+      }
+    })();
+
+    return (
+      <motion.div
+        key={activeTab}
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -20 }}
+        transition={{ duration: 0.3, ease: "easeInOut" }}
+      >
+        {content}
+      </motion.div>
+    );
   }, [activeTab, selectedStation, projectionData, transmissionData]);
 
 
@@ -120,7 +139,9 @@ export default function SisdatForecastDashboard() {
             <Header activeTab={activeTab} />
           </div>
           <main className="p-2 md:p-6">
-            {renderTabContent()}
+            <AnimatePresence mode="wait">
+              {renderTabContent()}
+            </AnimatePresence>
           </main>
         </div>
       </div>

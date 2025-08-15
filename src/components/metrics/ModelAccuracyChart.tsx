@@ -14,12 +14,14 @@ interface ModelAccuracyChartProps {
   data: ModelAccuracyData[];
   title?: string;
   type?: 'bar' | 'line';
+  period?: string;
 }
 
 export default function ModelAccuracyChart({ 
   data, 
   title = "Precisión de Modelos",
-  type = 'bar' 
+  type = 'bar',
+  period = "Período no especificado"
 }: ModelAccuracyChartProps) {
   const formatTooltip = (value: any, name: string) => {
     if (name === 'accuracy') {
@@ -46,7 +48,12 @@ export default function ModelAccuracyChart({
   if (type === 'line') {
     return (
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">{title}</h3>
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h3>
+          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full mt-2 lg:mt-0">
+            {period}
+          </span>
+        </div>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={data}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-600" />
@@ -83,7 +90,12 @@ export default function ModelAccuracyChart({
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-      <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">{title}</h3>
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h3>
+        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full mt-2 lg:mt-0">
+          {period}
+        </span>
+      </div>
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={data}>
           <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-600" />

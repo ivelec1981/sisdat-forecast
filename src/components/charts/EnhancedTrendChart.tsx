@@ -38,86 +38,122 @@ export default function EnhancedTrendChart({
 
     switch (viewMode) {
       case 'monthly':
-        // Combinar datos históricos y proyectados por mes
-        const monthlyData = new Map();
-        
-        // Agregar datos históricos
-        trendsData.monthlyTrends.historical.forEach(item => {
-          const key = `${item.year}-${item.month.toString().padStart(2, '0')}`;
-          const monthName = new Date(item.year, item.month - 1).toLocaleDateString('es-ES', { 
-            year: 'numeric', 
-            month: 'short' 
-          });
-          monthlyData.set(key, {
-            period: monthName,
-            historical: item.value / 1000,
-            type: 'historical',
-            sortKey: item.year * 100 + item.month
-          });
-        });
-
-        // Agregar datos proyectados (usar prophet por defecto)
-        trendsData.monthlyTrends.projected
-          .filter(item => item.model === 'prophet')
-          .forEach(item => {
-            const key = `${item.year}-${item.month.toString().padStart(2, '0')}`;
-            const monthName = new Date(item.year, item.month - 1).toLocaleDateString('es-ES', { 
-              year: 'numeric', 
-              month: 'short' 
-            });
-            const existing = monthlyData.get(key) || { 
-              period: monthName, 
-              type: 'projected',
-              sortKey: item.year * 100 + item.month
-            };
-            monthlyData.set(key, {
-              ...existing,
-              projected: item.value / 1000
+        if (dataType === 'power') {
+          // Para potencia, mostrar datos anuales (no hay granularidad mensual)
+          const allAnnualData = [];
+          
+          // Agregar todos los datos históricos
+          trendsData.monthlyTrends.historical.forEach(item => {
+            allAnnualData.push({
+              period: item.year.toString(),
+              demanda: item.value / 1000,
+              type: 'historical',
+              sortKey: item.year,
+              isHistorical: true
             });
           });
 
-        return Array.from(monthlyData.values())
-          .sort((a, b) => a.sortKey - b.sortKey)
-          .slice(-24); // Últimos 24 meses
+          // Agregar todos los datos proyectados (usar prophet por defecto)
+          trendsData.monthlyTrends.projected
+            .filter(item => item.model === 'prophet')
+            .forEach(item => {
+              allAnnualData.push({
+                period: item.year.toString(),
+                demanda: item.value / 1000,
+                type: 'projected',
+                sortKey: item.year,
+                isHistorical: false
+              });
+            });
+
+          return allAnnualData.sort((a, b) => a.sortKey - b.sortKey);
+        } else {
+          // Para energía, usar datos mensuales como antes
+          const allMonthlyData = [];
+          
+          // Agregar todos los datos históricos
+          trendsData.monthlyTrends.historical.forEach(item => {
+            if (item.month) { // Solo procesar si tiene mes (energía)
+              const monthName = new Date(item.year, item.month - 1).toLocaleDateString('es-ES', { 
+                year: 'numeric', 
+                month: 'short' 
+              });
+              allMonthlyData.push({
+                period: monthName,
+                demanda: item.value / 1000,
+                type: 'historical',
+                sortKey: item.year * 100 + item.month,
+                isHistorical: true
+              });
+            }
+          });
+
+          // Agregar todos los datos proyectados (usar prophet por defecto)
+          trendsData.monthlyTrends.projected
+            .filter(item => item.model === 'prophet' && item.month)
+            .forEach(item => {
+              const monthName = new Date(item.year, item.month - 1).toLocaleDateString('es-ES', { 
+                year: 'numeric', 
+                month: 'short' 
+              });
+              allMonthlyData.push({
+                period: monthName,
+                demanda: item.value / 1000,
+                type: 'projected',
+                sortKey: item.year * 100 + item.month,
+                isHistorical: false
+              });
+            });
+
+          return allMonthlyData
+            .sort((a, b) => a.sortKey - b.sortKey)
+            .slice(-36); // Últimos 36 meses para mayor contexto
+        }
 
       case 'annual':
-        const annualData = new Map();
+        // Combinar datos históricos y proyectados como una serie continua
+        const allAnnualData = [];
         
+        // Agregar todos los datos históricos
         trendsData.annualTrends.historical.forEach(item => {
-          annualData.set(item.year, {
+          allAnnualData.push({
             period: item.year.toString(),
-            historical: item.value / 1000,
+            demanda: item.value / 1000,
             type: 'historical',
-            sortKey: item.year
+            sortKey: item.year,
+            isHistorical: true
           });
         });
 
+        // Agregar todos los datos proyectados (usar prophet por defecto)
         trendsData.annualTrends.projected
           .filter(item => item.model === 'prophet')
           .forEach(item => {
-            const existing = annualData.get(item.year) || { 
+            allAnnualData.push({
               period: item.year.toString(),
+              demanda: item.value / 1000,
               type: 'projected',
-              sortKey: item.year
-            };
-            annualData.set(item.year, {
-              ...existing,
-              projected: item.value / 1000
+              sortKey: item.year,
+              isHistorical: false
             });
           });
 
-        return Array.from(annualData.values())
-          .sort((a, b) => a.sortKey - b.sortKey);
+        return allAnnualData.sort((a, b) => a.sortKey - b.sortKey);
 
       case 'evolution':
         return trendsData.last12Months.map(item => ({
-          period: new Date(item.year, item.month - 1).toLocaleDateString('es-ES', { 
-            month: 'short', 
-            year: '2-digit' 
-          }),
-          [item.type]: item.value / 1000,
+          period: dataType === 'power' 
+            ? item.year.toString() 
+            : new Date(item.year, (item.month || 1) - 1).toLocaleDateString('es-ES', { 
+                month: 'short', 
+                year: '2-digit' 
+              }),
+          demanda: item.value / 1000,
           type: item.type,
-          sortKey: item.year * 100 + item.month
+          sortKey: dataType === 'power' 
+            ? item.year 
+            : item.year * 100 + (item.month || 1),
+          isHistorical: item.type === 'historical'
         })).sort((a, b) => a.sortKey - b.sortKey);
 
       default:
@@ -127,10 +163,17 @@ export default function EnhancedTrendChart({
 
   const chartData = getChartData();
 
-  const formatTooltip = (value: any, name: string) => {
-    const label = name === 'historical' ? 'Histórico' : 
-                 name === 'projected' ? 'Proyectado' : name;
+  const formatTooltip = (value: any, name: string, props: any) => {
+    const isHistorical = props.payload?.isHistorical;
+    const label = isHistorical ? 'Histórico' : 'Proyectado';
     return [`${value.toFixed(1)} MW`, label];
+  };
+
+  // Función para crear puntos de datos con colores condicionales
+  const CustomDot = (props: any) => {
+    const { cx, cy, payload } = props;
+    const color = payload.isHistorical ? '#10B981' : '#3B82F6';
+    return <circle cx={cx} cy={cy} r={3} fill={color} stroke={color} strokeWidth={2} />;
   };
 
   if (loading) {
@@ -222,22 +265,12 @@ export default function EnhancedTrendChart({
             
             <Line
               type="monotone"
-              dataKey="historical"
+              dataKey="demanda"
               stroke="#10B981"
               strokeWidth={3}
-              dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
-              name="Histórico"
-              connectNulls={false}
-            />
-            <Line
-              type="monotone"
-              dataKey="projected"
-              stroke="#3B82F6"
-              strokeWidth={3}
-              strokeDasharray="5 5"
-              dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
-              name="Proyectado"
-              connectNulls={false}
+              dot={<CustomDot />}
+              name="Demanda"
+              connectNulls={true}
             />
           </LineChart>
         </ResponsiveContainer>
