@@ -262,6 +262,7 @@ export default function LoginForm({ variant = 'default' }: LoginFormProps) {
             error={errors.password}
             isPassword
             floatingLabel
+            id="legacy-login-password"
             required
           />
         </motion.div>

@@ -219,6 +219,7 @@ export default function AppleLoginForm() {
               leftIcon={<Mail className="w-4 h-4" />}
               error={errors.email}
               floatingLabel
+              id="apple-login-email"
               required
             />
           </motion.div>
@@ -238,6 +239,7 @@ export default function AppleLoginForm() {
               error={errors.password}
               isPassword
               floatingLabel
+              id="apple-login-password"
               required
             />
           </motion.div>

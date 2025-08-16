@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useId } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,7 +13,7 @@ import { AppleCard } from '@/components/ui/AppleCard';
 import { secureLoginSchema, type SecureLoginFormData } from '@/lib/validations/secureAuth';
 
 interface SecureLoginFormProps {
-  onMFARequired?: (sessionToken: string) => void;
+  onMFARequired?: (sessionToken: string, userEmail: string) => void;
   institutionalLogo?: React.ComponentType<{ className?: string }>;
 }
 
@@ -29,6 +29,17 @@ export default function SecureLoginForm({
   
   const recaptchaRef = useRef<ReCAPTCHA>(null);
   const router = useRouter();
+  const formId = useId(); // Generate unique ID for this form instance
+  const timestamp = React.useRef(Date.now()).current;
+  const uniqueFormId = `${formId}-${timestamp}`;
+  
+  // Debug log for development
+  React.useEffect(() => {
+    console.log('🔍 SecureLoginForm mounted with ID:', uniqueFormId);
+    return () => {
+      console.log('🗑️ SecureLoginForm unmounted with ID:', uniqueFormId);
+    };
+  }, [uniqueFormId]);
 
   const {
     register,
@@ -134,7 +145,7 @@ export default function SecureLoginForm({
 
       // Successful first factor - proceed to MFA
       if (result.requiresMFA && result.sessionToken) {
-        onMFARequired?.(result.sessionToken);
+        onMFARequired?.(result.sessionToken, data.email);
         return;
       }
 
@@ -164,16 +175,16 @@ export default function SecureLoginForm({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
     >
-      <AppleCard variant="glass" padding="xl" className="relative">
+      <AppleCard variant="glass" padding="lg" className="relative">
         {/* Header with Institutional Branding */}
         <motion.div 
-          className="text-center mb-8"
+          className="text-center mb-6"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
         >
           <motion.div
-            className="w-16 h-16 mx-auto mb-4 bg-sisdat-blue-primary rounded-apple-lg flex items-center justify-center"
+            className="w-12 h-12 mx-auto mb-3 bg-sisdat-blue-primary rounded-apple-lg flex items-center justify-center"
             whileHover={{ 
               scale: 1.05,
               transition: { duration: 0.2, ease: [0.4, 0, 0.2, 1] }
@@ -182,17 +193,17 @@ export default function SecureLoginForm({
             {InstitutionalLogo ? (
               <InstitutionalLogo className="w-10 h-10 text-white" />
             ) : (
-              <div className="w-10 h-10 border-2 border-white border-dashed rounded flex items-center justify-center">
+              <div className="w-8 h-8 border-2 border-white border-dashed rounded flex items-center justify-center">
                 <span className="text-white text-xs font-apple-medium">Logo</span>
               </div>
             )}
           </motion.div>
           
-          <h1 className="text-apple-2xl font-apple-semibold text-apple-text-primary mb-2 tracking-tight">
+          <h1 className="text-apple-xl font-apple-semibold text-apple-text-primary mb-1 tracking-tight">
             Acceso Seguro
           </h1>
           
-          <p className="text-apple-base text-apple-text-secondary font-apple-regular">
+          <p className="text-apple-sm text-apple-text-secondary font-apple-regular">
             Ingrese sus credenciales institucionales
           </p>
         </motion.div>
@@ -205,7 +216,7 @@ export default function SecureLoginForm({
               animate={{ opacity: 1, height: 'auto', y: 0 }}
               exit={{ opacity: 0, height: 0, y: -10 }}
               transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-              className="mb-6 p-4 bg-apple-red/5 border border-apple-red/20 rounded-apple"
+              className="mb-4 p-3 bg-apple-red/5 border border-apple-red/20 rounded-apple"
             >
               <div className="flex items-start gap-3">
                 <AlertCircle className="w-5 h-5 mt-0.5 text-apple-red flex-shrink-0" />
@@ -223,7 +234,7 @@ export default function SecureLoginForm({
         </AnimatePresence>
 
         {/* Secure Login Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Email Field */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -241,6 +252,7 @@ export default function SecureLoginForm({
               autoComplete="email"
               spellCheck={false}
               aria-describedby="email-help"
+              id={`secure-login-email-${uniqueFormId}`}
               required
             />
           </motion.div>
@@ -261,6 +273,7 @@ export default function SecureLoginForm({
               isPassword
               floatingLabel
               autoComplete="current-password"
+              id={`secure-login-password-${uniqueFormId}`}
               required
             />
           </motion.div>
@@ -292,11 +305,11 @@ export default function SecureLoginForm({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6, duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-            className="p-3 bg-sisdat-blue-light/5 border border-sisdat-blue-light/20 rounded-apple"
+            className="p-2 bg-sisdat-blue-light/5 border border-sisdat-blue-light/20 rounded-apple"
           >
             <p className="text-apple-xs text-apple-text-tertiary font-apple-regular leading-relaxed">
               <Shield className="w-3 h-3 inline mr-1" />
-              La sesión expirará automáticamente tras 15 minutos de inactividad por seguridad.
+              Sesión expira en 15 minutos por seguridad.
             </p>
           </motion.div>
 
@@ -328,23 +341,23 @@ export default function SecureLoginForm({
 
         {/* Security Footer */}
         <motion.div 
-          className="text-center pt-6 mt-6 border-t border-apple-gray-200"
+          className="text-center pt-4 mt-4 border-t border-apple-gray-200"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.8, duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
         >
-          <p className="text-apple-xs text-apple-text-tertiary font-apple-regular flex items-center justify-center gap-2">
+          <p className="text-apple-xs text-apple-text-tertiary font-apple-regular flex items-center justify-center gap-1">
             <Shield className="w-3 h-3" />
             Plataforma oficial del Gobierno del Ecuador
           </p>
           
           {loginAttempts > 0 && (
             <motion.p 
-              className="text-apple-xs text-apple-text-tertiary mt-2"
+              className="text-apple-xs text-apple-text-tertiary mt-1"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
             >
-              Intentos de acceso: {loginAttempts}
+              Intentos: {loginAttempts}
             </motion.p>
           )}
         </motion.div>

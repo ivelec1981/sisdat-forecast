@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, BarChart3, Users, Shield } from 'lucide-react';
 import FeatureCard from './FeatureCard';
@@ -31,16 +31,9 @@ const features = [
 const institutions = ['MEM', 'ARCONEL', 'CELEC', 'CENACE'];
 
 export default function AppleAuthLayoutComplete({ children }: AppleAuthLayoutCompleteProps) {
-  const [mounted, setMounted] = useState(false);
   const { isMobile, isTablet } = useDeviceCapabilities();
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return null; // Prevent hydration mismatch
-  }
+  
+  // Remove hydration check to prevent double rendering
 
   return (
     <div className="min-h-screen bg-apple-white font-sf apple-safe-area">
@@ -48,7 +41,7 @@ export default function AppleAuthLayoutComplete({ children }: AppleAuthLayoutCom
       <div className="hidden lg:flex min-h-screen">
         {/* Left Panel - 60% Content */}
         <motion.div 
-          className="w-3/5 p-16 xl:p-24 flex flex-col justify-center"
+          className="w-3/5 p-8 lg:p-12 xl:p-16 flex flex-col justify-center"
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
@@ -56,7 +49,7 @@ export default function AppleAuthLayoutComplete({ children }: AppleAuthLayoutCom
           <div className="max-w-lg xl:max-w-xl">
             {/* Logo SISDAT corporativo */}
             <motion.div 
-              className="mb-12"
+              className="mb-6"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
@@ -64,25 +57,25 @@ export default function AppleAuthLayoutComplete({ children }: AppleAuthLayoutCom
               <motion.img
                 src="/logosisdat1.png"
                 alt="SISDAT-forecast"
-                className="h-24 w-auto"
+                className="h-16 lg:h-20 xl:h-24 w-auto"
                 whileHover={{ 
                   scale: 1.02,
                   transition: { duration: 0.2, ease: [0.4, 0, 0.2, 1] }
                 }}
               />
-              <p className="text-apple-sm text-apple-text-tertiary font-apple-regular mt-2">
+              <p className="text-apple-xs lg:text-apple-sm text-apple-text-tertiary font-apple-regular mt-1">
                 Sistema de Proyección de Demanda Eléctrica
               </p>
             </motion.div>
 
             {/* Hero Content - Extreme minimalism */}
             <motion.div 
-              className="mb-16"
+              className="mb-8"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
             >
-              <h2 className="text-apple-4xl font-apple-light text-apple-text-primary mb-6 tracking-tight leading-tight">
+              <h2 className="text-apple-2xl lg:text-apple-3xl xl:text-apple-4xl font-apple-light text-apple-text-primary mb-3 lg:mb-4 tracking-tight leading-tight">
                 Proyectando el futuro{' '}
                 <span className="font-apple-medium text-sisdat-blue-primary">
                   energético
@@ -90,7 +83,7 @@ export default function AppleAuthLayoutComplete({ children }: AppleAuthLayoutCom
                 del Ecuador
               </h2>
               
-              <p className="text-apple-xl text-apple-text-secondary leading-relaxed max-w-md font-apple-regular">
+              <p className="text-apple-base lg:text-apple-lg xl:text-apple-xl text-apple-text-secondary leading-relaxed max-w-md font-apple-regular">
                 Plataforma oficial para la proyección de demanda eléctrica 
                 del sector energético ecuatoriano.
               </p>
@@ -98,7 +91,7 @@ export default function AppleAuthLayoutComplete({ children }: AppleAuthLayoutCom
 
             {/* Features - Minimalist cards */}
             <motion.div 
-              className="space-y-8 mb-16"
+              className="space-y-4 lg:space-y-6 mb-8"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6, duration: 0.6 }}
@@ -145,7 +138,7 @@ export default function AppleAuthLayoutComplete({ children }: AppleAuthLayoutCom
 
         {/* Right Panel - 40% Login Form */}
         <motion.div 
-          className="flex-1 lg:w-2/5 bg-apple-gray-50 flex items-center justify-center p-6 lg:p-8"
+          className="flex-1 lg:w-2/5 bg-apple-gray-50 flex items-center justify-center p-4 lg:p-6"
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1], delay: 0.1 }}

@@ -251,6 +251,7 @@ export default function AppleLoginFormWithHookForm() {
               isPassword
               floatingLabel
               autoComplete="current-password"
+              id="hookform-login-password"
             />
           </motion.div>
 

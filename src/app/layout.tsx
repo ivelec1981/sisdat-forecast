@@ -11,7 +11,6 @@ export const metadata: Metadata = {
   keywords: ['energia', 'prediccion', 'machine learning', 'arconel', 'regulacion', 'ecuador', 'demanda electrica'],
   authors: [{ name: 'ARCONEL - Agencia de Regulación y Control de Electricidad' }],
   manifest: '/manifest.json',
-  themeColor: '#2E7CD6',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
@@ -29,13 +28,6 @@ export const metadata: Metadata = {
     title: 'SISDAT-forecast',
     description: 'Sistema de Proyección de Demanda Eléctrica del Ecuador',
   },
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-    viewportFit: 'cover',
-  },
   other: {
     'mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-capable': 'yes',
@@ -47,6 +39,17 @@ export const metadata: Metadata = {
   },
 }
 
+export function generateViewport() {
+  return {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+    viewportFit: 'cover',
+    themeColor: '#2E7CD6',
+  }
+}
+
 export default function RootLayout({
   children,
 }: {
@@ -56,9 +59,9 @@ export default function RootLayout({
     <html lang="es">
       <head>
         <link rel="icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-192x192.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-192x192.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/logosisdat1.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/logosisdat1.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/logosisdat1.png" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="msapplication-TileColor" content="#2E7CD6" />
         <meta name="theme-color" content="#2E7CD6" />

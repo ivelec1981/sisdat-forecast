@@ -9,10 +9,12 @@ import { Shield, Smartphone, AlertCircle, Loader2, ArrowLeft, RefreshCw } from '
 import { AppleButton } from '@/components/ui/AppleButton';
 import { AppleCard } from '@/components/ui/AppleCard';
 import { mfaVerificationSchema, type MFAVerificationFormData } from '@/lib/validations/secureAuth';
+import { useAuth } from '@/hooks/useAuth';
 
 interface MFAVerificationModalProps {
   isOpen: boolean;
   sessionToken: string;
+  userEmail?: string;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -20,6 +22,7 @@ interface MFAVerificationModalProps {
 export default function MFAVerificationModal({
   isOpen,
   sessionToken,
+  userEmail,
   onClose,
   onSuccess
 }: MFAVerificationModalProps) {
@@ -80,8 +83,9 @@ export default function MFAVerificationModal({
   // Auto-focus and format code input
   useEffect(() => {
     if (watchedCode && watchedCode.length === 6) {
-      // Auto-submit when 6 digits are entered
-      handleSubmit(onSubmit)();
+      console.log('Auto-submit would trigger for code:', watchedCode);
+      // Temporarily disabled auto-submit for debugging
+      // handleSubmit(onSubmit)();
     }
   }, [watchedCode, handleSubmit]);
 
@@ -90,6 +94,8 @@ export default function MFAVerificationModal({
     success: boolean;
     error?: string;
   }> => {
+    console.log('verifyMFACode called with:', data);
+    
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 1500));
 
@@ -103,7 +109,12 @@ export default function MFAVerificationModal({
       '680427'  // Additional valid code
     ];
 
+    console.log('Valid codes:', validMFACodes);
+    console.log('Submitted code:', data.code);
+    console.log('Code length:', data.code.length);
+
     if (data.code.length !== 6) {
+      console.log('Length validation failed');
       return { success: false, error: 'El código debe tener 6 dígitos.' };
     }
 
@@ -114,17 +125,25 @@ export default function MFAVerificationModal({
 
     const hasInvalidPattern = invalidPatterns.some(pattern => pattern.test(data.code));
     if (hasInvalidPattern) {
+      console.log('Pattern validation failed');
       return { success: false, error: 'Código de verificación inválido. Use su aplicación de autenticación.' };
     }
 
     // Check if code is in valid list
-    if (!validMFACodes.includes(data.code)) {
+    const isValidCode = validMFACodes.includes(data.code);
+    console.log('Is valid code?', isValidCode);
+    
+    if (!isValidCode) {
+      console.log('Code not in valid list');
       return { success: false, error: 'Código de verificación incorrecto. Verifique su aplicación de autenticación.' };
     }
 
     // Simulate successful verification
+    console.log('MFA verification successful!');
     return { success: true };
   };
+
+  const { login } = useAuth();
 
   const onSubmit = async (data: MFAVerificationFormData) => {
     console.log('MFA onSubmit called with data:', data);
@@ -137,21 +156,98 @@ export default function MFAVerificationModal({
       console.log('MFA verification result:', result);
 
       if (!result.success) {
-        console.log('MFA failed:', result.error);
+        console.log('❌ MFA failed:', result.error);
         setMfaError(result.error || 'Código de verificación incorrecto');
+        console.log('🔄 Resetting form due to MFA failure...');
         reset();
         return;
       }
 
-      // Success - proceed to dashboard
-      console.log('MFA successful! Calling onSuccess and navigating...');
+      // Success - authenticate user in Zustand store
+      console.log('✅ MFA successful! Setting authenticated user in store...');
+      
+      // Create user data based on the email from login context
+      const getUserData = (email: string) => {
+        const emailToUserMap: Record<string, any> = {
+          'admin@arconel.gob.ec': {
+            id: 'user_arconel_admin',
+            email: 'admin@arconel.gob.ec',
+            name: 'Administrador ARCONEL',
+            role: 'administrador' as const,
+            company: 'ARCONEL'
+          },
+          'director@mem.gob.ec': {
+            id: 'user_mem_director',
+            email: 'director@mem.gob.ec',
+            name: 'Director MEM',
+            role: 'administrador' as const,
+            company: 'Ministerio de Energía'
+          },
+          'operador@celec.gob.ec': {
+            id: 'user_celec_operator',
+            email: 'operador@celec.gob.ec',
+            name: 'Operador CELEC',
+            role: 'operador_empresa' as const,
+            company: 'CELEC EP'
+          },
+          'analista@cenace.gob.ec': {
+            id: 'user_cenace_analyst',
+            email: 'analista@cenace.gob.ec',
+            name: 'Analista CENACE',
+            role: 'consultor_mem' as const,
+            company: 'CENACE'
+          }
+        };
+        
+        return emailToUserMap[email] || {
+          id: 'user_default',
+          email: email,
+          name: 'Usuario del Sistema',
+          role: 'consultor_mem' as const,
+          company: 'Institución Gubernamental'
+        };
+      };
+      
+      const userData = getUserData(userEmail || 'admin@arconel.gob.ec');
+      
+      // Set user and token in Zustand store directly
+      useAuth.setState({ 
+        user: userData, 
+        token: sessionToken, 
+        isLoading: false, 
+        error: null 
+      });
+      
+      console.log('✅ User authenticated in store:', userData);
+      
+      // Verify the store was updated
+      const currentState = useAuth.getState();
+      console.log('🔍 Current Zustand state after setting:', currentState);
+      
+      // Check if localStorage was updated
+      setTimeout(() => {
+        if (typeof window !== 'undefined') {
+          const stored = localStorage.getItem('sisdat-auth-storage');
+          console.log('💾 localStorage after MFA success:', stored);
+        }
+      }, 100);
+      
+      console.log('📍 Calling onSuccess callback...');
       onSuccess();
+      console.log('🚀 Attempting navigation to /dashboard...');
       router.push('/dashboard');
 
     } catch (error) {
-      console.error('MFA verification error:', error);
+      console.error('❌ MFA verification error:', error);
+      console.error('❌ Error details:', { 
+        message: error?.message || 'No message', 
+        stack: error?.stack || 'No stack',
+        type: typeof error,
+        stringified: JSON.stringify(error, null, 2)
+      });
       setMfaError('Error del sistema. Intente nuevamente.');
     } finally {
+      console.log('🔄 MFA onSubmit finally block - setting isLoading to false');
       setIsLoading(false);
     }
   };
@@ -336,12 +432,24 @@ export default function MFAVerificationModal({
                   Volver
                 </AppleButton>
 
-                <AppleButton
-                  type="submit"
-                  variant="energy"
-                  size="lg"
-                  className="flex-1"
+                <button
+                  type="button"
+                  className="flex-1 h-12 px-8 bg-gradient-to-r from-sisdat-blue-primary to-sisdat-blue-light text-white font-apple-medium rounded-apple-lg shadow-apple-button hover:shadow-[0_4px_12px_rgba(46,124,214,0.25)] hover:-translate-y-0.5 active:translate-y-0 focus:apple-focus transition-all duration-150 disabled:opacity-50 disabled:pointer-events-none"
                   disabled={isLoading || watchedCode?.length !== 6}
+                  onClick={() => {
+                    console.log('Manual button click triggered');
+                    console.log('Current code:', watchedCode);
+                    console.log('isLoading:', isLoading);
+                    console.log('Code length:', watchedCode?.length);
+                    
+                    if (!watchedCode || watchedCode.length !== 6) {
+                      console.log('Button should be disabled - code length invalid');
+                      return;
+                    }
+                    
+                    console.log('Calling onSubmit directly...');
+                    onSubmit({ code: watchedCode, sessionToken });
+                  }}
                 >
                   {isLoading ? (
                     <div className="flex items-center justify-center gap-2">
@@ -351,7 +459,7 @@ export default function MFAVerificationModal({
                   ) : (
                     'Verificar'
                   )}
-                </AppleButton>
+                </button>
               </div>
             </form>
 

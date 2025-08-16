@@ -14,9 +14,34 @@ export default function DashboardPage() {
   const router = useRouter();
 
   useEffect(() => {
+    console.log('🏠 Dashboard Page - Auth Check:', {
+      user,
+      isLoading,
+      hasUser: !!user,
+      userEmail: user?.email,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Check localStorage directly for debugging
+    if (typeof window !== 'undefined') {
+      const storedAuth = localStorage.getItem('sisdat-auth-storage');
+      console.log('📱 Dashboard - localStorage auth:', storedAuth);
+      if (storedAuth) {
+        try {
+          const parsed = JSON.parse(storedAuth);
+          console.log('📱 Dashboard - Parsed auth data:', parsed);
+        } catch (e) {
+          console.error('📱 Dashboard - Failed to parse auth data:', e);
+        }
+      }
+    }
+    
     // Verificar si el usuario está autenticado
     if (!isLoading && !user) {
+      console.log('❌ Dashboard - No authenticated user, redirecting to login');
       router.push('/login');
+    } else if (user) {
+      console.log('✅ Dashboard - User is authenticated:', user.email);
     }
   }, [user, isLoading, router]);
 
