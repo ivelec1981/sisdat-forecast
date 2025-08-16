@@ -58,6 +58,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <head>
+        <link rel="preload" href="/logosisdat1.png" as="image" type="image/png" />
         <link rel="icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" sizes="180x180" href="/logosisdat1.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/logosisdat1.png" />
