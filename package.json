@@ -19,8 +19,11 @@
     "db:deploy": "prisma migrate deploy"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.1",
     "@prisma/client": "^6.14.0",
     "@radix-ui/react-slot": "^1.2.3",
+    "@types/react-google-recaptcha": "^2.1.9",
+    "@use-gesture/react": "^10.3.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.12",
@@ -30,10 +33,13 @@
     "prisma": "^6.14.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
+    "react-google-recaptcha": "^3.1.0",
+    "react-hook-form": "^7.62.0",
     "react-leaflet": "^4.2.1",
     "recharts": "^2.10.0",
     "tailwind-merge": "^3.3.1",
     "xlsx": "^0.18.5",
+    "zod": "^4.0.17",
     "zustand": "^5.0.7"
   },
   "devDependencies": {
