@@ -9,12 +9,16 @@ import ModelComparisonTable from '../metrics/ModelComparisonTable';
 import RealTimeMetrics from '../metrics/RealTimeMetrics';
 import EnhancedTrendChart from '../charts/EnhancedTrendChart';
 import SectorDemandPieChart from '../charts/SectorDemandPieChart';
-import ResidentialRealDataChart from '../charts/ResidentialRealDataChart';
+import SectorDataChart from '../charts/SectorDataChart';
 import { ProjectionData } from '@/types/dashboard';
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
 import { useModelMetrics } from '@/hooks/useModelMetrics';
 import { useSystemInfo } from '@/hooks/useSystemInfo';
 import { useResidentialData } from '@/hooks/useResidentialData';
+import { useIndustrialData } from '@/hooks/useIndustrialData';
+import { useCommercialData } from '@/hooks/useCommercialData';
+import { useOthersData } from '@/hooks/useOthersData';
+import { usePublicLightingData } from '@/hooks/usePublicLightingData';
 
 interface OverviewTabProps {
   projectionData: ProjectionData;
@@ -32,6 +36,34 @@ export default function OverviewTab({ projectionData }: OverviewTabProps) {
     yearlyTrends, 
     loading: residentialLoading 
   } = useResidentialData("CNEL-Guayas Los Ríos");
+
+  // Datos industriales de CNEL-Guayas Los Ríos
+  const { 
+    data: industrialData, 
+    summary: industrialSummary, 
+    loading: industrialLoading 
+  } = useIndustrialData("CNEL-Guayas Los Ríos");
+  
+  // Datos comerciales de CNEL-Guayas Los Ríos
+  const { 
+    data: commercialData, 
+    summary: commercialSummary, 
+    loading: commercialLoading 
+  } = useCommercialData("CNEL-Guayas Los Ríos");
+  
+  // Datos de otros sectores de CNEL-Guayas Los Ríos
+  const { 
+    data: othersData, 
+    summary: othersSummary, 
+    loading: othersLoading 
+  } = useOthersData("CNEL-Guayas Los Ríos");
+  
+  // Datos de alumbrado público de CNEL-Guayas Los Ríos
+  const { 
+    data: publicLightingData, 
+    summary: publicLightingSummary, 
+    loading: publicLightingLoading 
+  } = usePublicLightingData("CNEL-Guayas Los Ríos");
 
   // Usar datos reales como principal fuente
   const totalDemand = React.useMemo(() => {
@@ -231,8 +263,8 @@ export default function OverviewTab({ projectionData }: OverviewTabProps) {
         />
       </div>
 
-      {/* Datos reales de CNEL-Guayas Los Ríos como principal */}
-      <ResidentialRealDataChart title="Datos Reales - CNEL-Guayas Los Ríos (Sector Residencial)" />
+      {/* Datos reales de CNEL-Guayas Los Ríos con filtro por sector */}
+      <SectorDataChart title="Datos Reales - CNEL-Guayas Los Ríos" company="CNEL-Guayas Los Ríos" />
 
       {/* Gráfico de tendencias mejorado - datos sintéticos */}
       <EnhancedTrendChart title="Tendencia Sintética - Todas las Empresas" />
@@ -276,7 +308,7 @@ export default function OverviewTab({ projectionData }: OverviewTabProps) {
           <Database className="w-5 h-5 text-blue-500" />
           Información de Datos Reales
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-4">
           <div className="bg-white dark:bg-slate-800 rounded-lg p-4">
             <div className="text-sm text-slate-600 dark:text-slate-400">Empresa</div>
             <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">CNEL-Guayas Los Ríos</div>
@@ -290,19 +322,49 @@ export default function OverviewTab({ projectionData }: OverviewTabProps) {
             </div>
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-lg p-4">
-            <div className="text-sm text-slate-600 dark:text-slate-400">Total Registros</div>
+            <div className="text-sm text-slate-600 dark:text-slate-400">Registros Residenciales</div>
             <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">
               {residentialSummary?.totalRecords || 434}
             </div>
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-lg p-4">
+            <div className="text-sm text-slate-600 dark:text-slate-400">Registros Industriales</div>
+            <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              {industrialSummary?.totalRecords || 434}
+            </div>
+          </div>
+          <div className="bg-white dark:bg-slate-800 rounded-lg p-4">
+            <div className="text-sm text-slate-600 dark:text-slate-400">Registros Comerciales</div>
+            <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              {commercialSummary?.totalRecords || 434}
+            </div>
+          </div>
+          <div className="bg-white dark:bg-slate-800 rounded-lg p-4">
+            <div className="text-sm text-slate-600 dark:text-slate-400">Registros Otros</div>
+            <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              {othersSummary?.totalRecords || 434}
+            </div>
+          </div>
+          <div className="bg-white dark:bg-slate-800 rounded-lg p-4">
+            <div className="text-sm text-slate-600 dark:text-slate-400">Registros Alumbrado Público</div>
+            <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              {publicLightingSummary?.totalRecords || 434}
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white dark:bg-slate-800 rounded-lg p-4">
             <div className="text-sm text-slate-600 dark:text-slate-400">Modelos ML</div>
             <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">Prophet, GRU, WaveNet, GBR</div>
           </div>
+          <div className="bg-white dark:bg-slate-800 rounded-lg p-4">
+            <div className="text-sm text-slate-600 dark:text-slate-400">Sectores Disponibles</div>
+            <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">Residencial, Industrial, Comercial, Otros, Alumbrado Público</div>
+          </div>
         </div>
         <div className="mt-4 text-sm text-slate-600 dark:text-slate-400">
-          <strong>Fuente:</strong> Datos históricos y proyecciones reales del sector residencial de CNEL-Guayas Los Ríos.
-          Los datos incluyen valores de energía (MWh) y potencia (MW) con predicciones de múltiples modelos de machine learning.
+          <strong>Fuente:</strong> Datos históricos y proyecciones reales de CNEL-Guayas Los Ríos para todos los sectores.
+          Los datos incluyen valores de energía (MWh) y potencia (MW) con predicciones de múltiples modelos de machine learning para los sectores residencial, industrial, comercial, otros y alumbrado público.
         </div>
       </div>
 
