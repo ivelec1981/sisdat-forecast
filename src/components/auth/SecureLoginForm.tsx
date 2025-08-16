@@ -11,6 +11,7 @@ import { AppleButton } from '@/components/ui/AppleButton';
 import { AppleInput } from '@/components/ui/AppleInput';
 import { AppleCard } from '@/components/ui/AppleCard';
 import { secureLoginSchema, type SecureLoginFormData } from '@/lib/validations/secureAuth';
+import { useStableId } from '@/hooks/useStableId';
 
 interface SecureLoginFormProps {
   onMFARequired?: (sessionToken: string, userEmail: string) => void;
@@ -29,17 +30,16 @@ export default function SecureLoginForm({
   
   const recaptchaRef = useRef<ReCAPTCHA>(null);
   const router = useRouter();
-  const formId = useId(); // Generate unique ID for this form instance
-  const timestamp = React.useRef(Date.now()).current;
-  const uniqueFormId = `${formId}-${timestamp}`;
+  const emailId = useStableId('secure-login-email');
+  const passwordId = useStableId('secure-login-password');
   
   // Debug log for development
   React.useEffect(() => {
-    console.log('🔍 SecureLoginForm mounted with ID:', uniqueFormId);
+    console.log('🔍 SecureLoginForm mounted with IDs:', { emailId, passwordId });
     return () => {
-      console.log('🗑️ SecureLoginForm unmounted with ID:', uniqueFormId);
+      console.log('🗑️ SecureLoginForm unmounted');
     };
-  }, [uniqueFormId]);
+  }, [emailId, passwordId]);
 
   const {
     register,
@@ -252,7 +252,7 @@ export default function SecureLoginForm({
               autoComplete="email"
               spellCheck={false}
               aria-describedby="email-help"
-              id={`secure-login-email-${uniqueFormId}`}
+              id={emailId}
               required
             />
           </motion.div>
@@ -273,7 +273,7 @@ export default function SecureLoginForm({
               isPassword
               floatingLabel
               autoComplete="current-password"
-              id={`secure-login-password-${uniqueFormId}`}
+              id={passwordId}
               required
             />
           </motion.div>

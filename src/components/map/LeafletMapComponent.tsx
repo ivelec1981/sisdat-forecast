@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useStableId } from '@/hooks/useStableId';
 
 // Interfaces
 interface CargaAgrupada {
@@ -62,8 +63,9 @@ export default function LeafletMapComponent({
   const [L, setL] = useState<any>(null);
   const [mapInstance, setMapInstance] = useState<any>(null);
 
-  // ID único para este componente
-  const mapId = useRef(`map-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+  // ID único para este componente usando hook estable
+  const stableMapId = useStableId('leaflet-map');
+  const mapId = useRef(stableMapId);
 
   // Función para limpiar el mapa existente
   const cleanupMap = useCallback(() => {
