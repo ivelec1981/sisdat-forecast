@@ -142,6 +142,13 @@ export const useAuth = create<AuthState>()(
         user: state.user, 
         token: state.token 
       }),
+      onRehydrateStorage: () => (state, error) => {
+        if (error) {
+          console.error('🚨 useAuth - Hydration error:', error);
+        } else {
+          console.log('💧 useAuth - Hydrated state:', state);
+        }
+      },
     }
   )
 );

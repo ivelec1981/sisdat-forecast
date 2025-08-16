@@ -1,6 +1,6 @@
-const CACHE_NAME = 'sisdat-forecast-v1';
-const STATIC_CACHE = 'sisdat-static-v1';
-const DYNAMIC_CACHE = 'sisdat-dynamic-v1';
+const CACHE_NAME = 'sisdat-forecast-v4';
+const STATIC_CACHE = 'sisdat-static-v4';
+const DYNAMIC_CACHE = 'sisdat-dynamic-v4';
 
 // Files to cache immediately
 const STATIC_FILES = [
@@ -9,11 +9,7 @@ const STATIC_FILES = [
   '/dashboard',
   '/offline',
   '/manifest.json',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png',
-  '/_next/static/css/app/layout.css',
-  '/_next/static/chunks/main.js',
-  '/_next/static/chunks/webpack.js'
+  '/logosisdat1.png'
 ];
 
 // API routes to cache with network-first strategy
@@ -107,8 +103,13 @@ async function handleApiRequest(request) {
     
     // If successful, update cache and return response
     if (networkResponse.ok) {
-      const cache = await caches.open(DYNAMIC_CACHE);
-      cache.put(request, networkResponse.clone());
+      try {
+        const cache = await caches.open(DYNAMIC_CACHE);
+        // Clone the response before caching to avoid consumption issues
+        await cache.put(request, networkResponse.clone());
+      } catch (cacheError) {
+        console.log('[SW] Failed to cache API response:', cacheError);
+      }
     }
     
     return networkResponse;
@@ -176,17 +177,29 @@ async function handlePageRequest(request) {
   const cachedResponse = await caches.match(request);
   
   // Always try to fetch from network
-  const networkResponsePromise = fetch(request).then((response) => {
+  const networkResponsePromise = fetch(request).then(async (response) => {
     // Update cache with new response
     if (response.ok) {
-      const cache = caches.open(DYNAMIC_CACHE);
-      cache.then(c => c.put(request, response.clone()));
+      try {
+        const cache = await caches.open(DYNAMIC_CACHE);
+        // Clone the response before using it
+        await cache.put(request, response.clone());
+      } catch (error) {
+        console.log('[SW] Failed to cache page response:', error);
+      }
     }
     return response;
+  }).catch(error => {
+    console.log('[SW] Network fetch failed:', error);
+    throw error;
   });
   
   // Return cached version immediately if available
   if (cachedResponse) {
+    // Update cache in background without blocking
+    networkResponsePromise.catch(() => {
+      // Silently handle network errors when serving from cache
+    });
     return cachedResponse;
   }
   
@@ -304,15 +317,14 @@ self.addEventListener('push', (event) => {
     
     const options = {
       body: data.body || 'Nueva notificación de SISDAT-forecast',
-      icon: '/icons/icon-192x192.png',
-      badge: '/icons/icon-72x72.png',
+      icon: '/logosisdat1.png',
+      badge: '/logosisdat1.png',
       tag: data.tag || 'sisdat-notification',
       data: data.data || {},
       actions: [
         {
           action: 'view',
-          title: 'Ver',
-          icon: '/icons/view-icon.png'
+          title: 'Ver'
         },
         {
           action: 'dismiss',

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useId } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import { cva, type VariantProps } from 'class-variance-authority';
@@ -67,6 +67,7 @@ const AppleInput = React.forwardRef<HTMLInputElement, AppleInputProps>(
     const [showPassword, setShowPassword] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
     const [hasValue, setHasValue] = useState(!!value);
+    const uniqueId = useId();
 
     const inputType = isPassword ? (showPassword ? 'text' : 'password') : type;
     
@@ -91,7 +92,8 @@ const AppleInput = React.forwardRef<HTMLInputElement, AppleInputProps>(
       onChange?.(e);
     };
 
-    const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
+    // Generate unique ID using React's useId hook to avoid collisions
+    const inputId = id || `${label?.toLowerCase().replace(/\s+/g, '-')}-${uniqueId}`;
 
     return (
       <div className="space-y-2">

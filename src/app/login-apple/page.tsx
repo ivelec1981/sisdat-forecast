@@ -1,12 +1,22 @@
 'use client';
 
-import AppleAuthLayout from '@/components/auth/AppleAuthLayout';
-import AppleLoginForm from '@/components/auth/AppleLoginForm';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function AppleLoginPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    // Redirect to secure login page to avoid ID conflicts
+    router.replace('/login/secure');
+  }, [router]);
+
   return (
-    <AppleAuthLayout>
-      <AppleLoginForm />
-    </AppleAuthLayout>
+    <div className="min-h-screen bg-apple-white flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-8 h-8 border-2 border-sisdat-blue-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-apple-sm text-apple-text-secondary">Redirigiendo a acceso seguro...</p>
+      </div>
+    </div>
   );
 }
