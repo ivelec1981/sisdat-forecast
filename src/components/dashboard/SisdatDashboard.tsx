@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -17,74 +18,106 @@ export default function SisdatForecastDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [windowWidth, setWindowWidth] = useState(0);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  useEffect(() => {
-    setWindowWidth(window.innerWidth);
+  const handleSidebarToggle = useCallback(() => {
+    setSidebarOpen(prev => !prev);
   }, []);
 
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'overview':
-        return <OverviewTab projectionData={projectionData} />;
-      case 'projections':
-        return <ProjectionsTab projectionData={projectionData} />;
-      case 'transmission-map':
-        return (
-          <TransmissionMapTab
-            transmissionData={transmissionData}
-            selectedStation={selectedStation}
-            setSelectedStation={setSelectedStation}
-          />
-        );
-      case 'single-line-diagram':
-        return <SingleLineDiagramTab />;
-      case 'documentation':
-        return <DocumentationTab />;
-      default:
-        return (
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Sección en Desarrollo</h3>
-            <p className="text-slate-600">Esta funcionalidad estará disponible próximamente.</p>
-          </div>
-        );
-    }
-  };
+  const handleSidebarClose = useCallback(() => {
+    setSidebarOpen(false);
+  }, []);
 
-  const className = "bg-white text-black";
+  const handleSidebarToggleCollapse = useCallback(() => {
+    setSidebarCollapsed(prev => !prev);
+  }, []);
+
+  const renderTabContent = useCallback(() => {
+    const content = (() => {
+      switch (activeTab) {
+        case 'overview':
+          return <OverviewTab projectionData={projectionData} />;
+        case 'projections':
+          return <ProjectionsTab />;
+        case 'transmission-map':
+          return (
+            <TransmissionMapTab
+              transmissionData={transmissionData}
+              selectedStation={selectedStation}
+              setSelectedStation={setSelectedStation}
+            />
+          );
+        case 'single-line-diagram':
+          return <SingleLineDiagramTab />;
+        case 'documentation':
+          return <DocumentationTab />;
+        default:
+          return (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6"
+            >
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Sección en Desarrollo</h3>
+              <p className="text-slate-600 dark:text-slate-300">Esta funcionalidad estará disponible próximamente.</p>
+            </motion.div>
+          );
+      }
+    })();
+
+    return (
+      <motion.div
+        key={activeTab}
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -20 }}
+        transition={{ duration: 0.3, ease: "easeInOut" }}
+      >
+        {content}
+      </motion.div>
+    );
+  }, [activeTab, selectedStation, projectionData, transmissionData]);
+
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col md:flex-row">
        
         <div className="md:block hidden">
-          <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+          <Sidebar 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab}
+            isCollapsed={sidebarCollapsed}
+            onToggleCollapse={handleSidebarToggleCollapse}
+          />
         </div>
         
         {sidebarOpen && (
           <div className="fixed inset-0 z-40 bg-black bg-opacity-40 flex">
-            <div className="bg-white w-64 h-full shadow-lg">
+            <div className="bg-white dark:bg-slate-900 w-64 h-full shadow-lg">
               <Sidebar
                 activeTab={activeTab}
                 setActiveTab={(tab) => {
                   setActiveTab(tab);
-                  setSidebarOpen(false);
+                  handleSidebarClose();
                 }}
                 mobile
               />
             </div>
             <div
               className="flex-1"
-              onClick={() => setSidebarOpen(false)}
+              onClick={handleSidebarClose}
               aria-label="Cerrar menú"
             />
           </div>
         )}
-        <div className="flex-1 md:ml-64">
-          <div className="md:hidden flex items-center px-4 py-2 gap-2 bg-white rounded-lg shadow-sm">
+        <div className={`flex-1 transition-all duration-300 ${
+          sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'
+        }`}>
+          <div className="md:hidden flex items-center px-4 py-2 gap-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm">
             <button
-              className="p-1 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none"
-              onClick={() => setSidebarOpen(true)}
+              className="p-1 flex items-center text-slate-400 hover:text-slate-600 dark:text-slate-300 dark:hover:text-slate-100 focus:outline-none"
+              onClick={handleSidebarToggle}
               aria-label="Abrir menú"
             >
               <svg width="20" height="20" fill="none" stroke="currentColor">
@@ -92,12 +125,12 @@ export default function SisdatForecastDashboard() {
               </svg>
             </button>
             <span
-              className="text-lg font-semibold text-slate-900 truncate overflow-hidden whitespace-nowrap flex-1"
-              title={activeTab === 'overview' ? 'Proyecciones de Demanda' : activeTab === 'projections' ? 'Proyecciones de Demanda' : activeTab === 'transmission-map' ? 'Mapa de Transmisión' : activeTab === 'single-line-diagram' ? 'Diagrama Unifilar' : activeTab === 'documentation' ? 'Documentación' : 'Sección en Desarrollo'}
+              className="text-lg font-semibold text-slate-900 dark:text-slate-100 truncate overflow-hidden whitespace-nowrap flex-1"
+              title={activeTab === 'overview' ? 'Proyecciones de Demanda' : activeTab === 'projections' ? 'Proyecciones de Demanda' : activeTab === 'transmission-map' ? 'Cargas Singulares' : activeTab === 'single-line-diagram' ? 'Diagrama Unifilar' : activeTab === 'documentation' ? 'Documentación' : 'Sección en Desarrollo'}
             >
               {activeTab === 'overview' && 'Proyecciones de Demanda'}
               {activeTab === 'projections' && 'Proyecciones de Demanda'}
-              {activeTab === 'transmission-map' && 'Mapa de Transmisión'}
+              {activeTab === 'transmission-map' && 'Cargas Singulares'}
               {activeTab === 'single-line-diagram' && 'Diagrama Unifilar'}
               {activeTab === 'documentation' && 'Documentación'}
             </span>
@@ -106,7 +139,9 @@ export default function SisdatForecastDashboard() {
             <Header activeTab={activeTab} />
           </div>
           <main className="p-2 md:p-6">
-            {renderTabContent()}
+            <AnimatePresence mode="wait">
+              {renderTabContent()}
+            </AnimatePresence>
           </main>
         </div>
       </div>

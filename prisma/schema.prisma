@@ -1,0 +1,257 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// Modelo para empresas distribuidoras
+model Company {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique // E.E. Quito, CNEL-Guayaquil, etc.
+  code        String   @unique // código interno
+  region      String   // Norte, Centro, Sur, Costa, etc.
+  population  Int?     // población servida
+  area        Float?   // área de cobertura en km²
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relaciones
+  energyRecords     EnergyRecord[]
+  transmissionData  TransmissionStation[]
+  
+  @@map("companies")
+}
+
+// Modelo principal de datos energéticos
+model EnergyRecord {
+  id          Int      @id @default(autoincrement())
+  companyId   Int
+  category    String   // res, com, ind, ap, otr
+  year        Int
+  month       Int?     // opcional para datos mensuales
+  model       String   // hist, prophet, gru, lstm, etc.
+  energy      Float    // consumo/predicción en MWh
+  accuracy    Float?   // precisión del modelo (%)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relaciones
+  company     Company  @relation(fields: [companyId], references: [id])
+  
+  @@unique([companyId, category, year, month, model])
+  @@map("energy_records")
+}
+
+// Modelo para estaciones de transmisión
+model TransmissionStation {
+  id            Int      @id @default(autoincrement())
+  companyId     Int
+  name          String
+  lat           Float
+  lng           Float
+  voltage       Float    // kV
+  demand        Float    // MW
+  maxDemand     Float    // MW
+  stationType   String   // subestación, central, etc.
+  status        String   // activa, mantenimiento, fuera_servicio
+  sector        String   // residencial, industrial, etc.
+  tariff        String   // tipo de tarifa
+  yearsRange    String   // período de datos
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relaciones
+  company       Company  @relation(fields: [companyId], references: [id])
+  
+  @@map("transmission_stations")
+}
+
+// Modelo para histórico de predicciones
+model PredictionHistory {
+  id            Int      @id @default(autoincrement())
+  companyId     Int
+  category      String
+  targetYear    Int      // año objetivo de la predicción
+  model         String   // modelo usado
+  predictedValue Float   // valor predicho
+  actualValue   Float?   // valor real (se llena cuando esté disponible)
+  predictionDate DateTime // cuándo se hizo la predicción
+  accuracy      Float?   // precisión calculada
+  createdAt     DateTime @default(now())
+  
+  @@map("prediction_history")
+}
+
+// Modelo para configuración de modelos ML
+model ModelConfig {
+  id            Int      @id @default(autoincrement())
+  name          String   @unique // prophet, gru, lstm, etc.
+  displayName   String   // nombre para mostrar en UI
+  isActive      Boolean  @default(true)
+  parameters    Json     // parámetros específicos del modelo
+  lastTrained   DateTime? // última vez que se entrenó
+  accuracy      Float?   // precisión promedio
+  description   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("model_configs")
+}
+
+// Modelo para logs del sistema
+model SystemLog {
+  id          Int      @id @default(autoincrement())
+  level       String   // info, warn, error
+  message     String
+  component   String   // dashboard, api, ml_model, etc.
+  metadata    Json?    // datos adicionales
+  createdAt   DateTime @default(now())
+  
+  @@map("system_logs")
+}
+
+// Modelo específico para datos residenciales basado en estructura Excel
+model ResidentialData {
+  id              Int      @id @default(autoincrement())
+  powerCompany    String   // empresa eléctrica
+  date            DateTime // fecha del registro
+  type            String   // tipo de dato (ej: residential)
+  
+  // Datos de energía por modelo (MWh)
+  enerComb        Float?   // energía combinada
+  enerProphet     Float?   // energía predicha por Prophet
+  enerGru         Float?   // energía predicha por GRU
+  enerWavenet     Float?   // energía predicha por WaveNet
+  enerGbr         Float?   // energía predicha por GBR
+  
+  // Datos de potencia por modelo (MW)
+  potComb         Float?   // potencia combinada
+  potProphet      Float?   // potencia predicha por Prophet
+  potGbr          Float?   // potencia predicha por GBR
+  potGru          Float?   // potencia predicha por GRU
+  potWavenet      Float?   // potencia predicha por WaveNet
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([powerCompany, date, type])
+  @@map("residential_data")
+}
+
+// Modelo específico para datos industriales basado en estructura Excel
+model IndustrialData {
+  id              Int      @id @default(autoincrement())
+  powerCompany    String   // empresa eléctrica
+  date            DateTime // fecha del registro
+  type            String   // tipo de dato (ej: industrial)
+  
+  // Datos de energía por modelo (MWh)
+  enerComb        Float?   // energía combinada
+  enerProphet     Float?   // energía predicha por Prophet
+  enerGru         Float?   // energía predicha por GRU
+  enerWavenet     Float?   // energía predicha por WaveNet
+  enerGbr         Float?   // energía predicha por GBR
+  
+  // Datos de potencia por modelo (MW)
+  potComb         Float?   // potencia combinada
+  potProphet      Float?   // potencia predicha por Prophet
+  potGbr          Float?   // potencia predicha por GBR
+  potGru          Float?   // potencia predicha por GRU
+  potWavenet      Float?   // potencia predicha por WaveNet
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([powerCompany, date, type])
+  @@map("industrial_data")
+}
+
+// Modelo específico para datos comerciales basado en estructura Excel
+model CommercialData {
+  id              Int      @id @default(autoincrement())
+  powerCompany    String   // empresa eléctrica
+  date            DateTime // fecha del registro
+  type            String   // tipo de dato (ej: commercial)
+  
+  // Datos de energía por modelo (MWh)
+  enerComb        Float?   // energía combinada
+  enerProphet     Float?   // energía predicha por Prophet
+  enerGru         Float?   // energía predicha por GRU
+  enerWavenet     Float?   // energía predicha por WaveNet
+  enerGbr         Float?   // energía predicha por GBR
+  
+  // Datos de potencia por modelo (MW)
+  potComb         Float?   // potencia combinada
+  potProphet      Float?   // potencia predicha por Prophet
+  potGbr          Float?   // potencia predicha por GBR
+  potGru          Float?   // potencia predicha por GRU
+  potWavenet      Float?   // potencia predicha por WaveNet
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([powerCompany, date, type])
+  @@map("commercial_data")
+}
+
+// Modelo específico para datos de otros sectores basado en estructura Excel
+model OthersData {
+  id              Int      @id @default(autoincrement())
+  powerCompany    String   // empresa eléctrica
+  date            DateTime // fecha del registro
+  type            String   // tipo de dato (ej: others)
+  
+  // Datos de energía por modelo (MWh)
+  enerComb        Float?   // energía combinada
+  enerProphet     Float?   // energía predicha por Prophet
+  enerGru         Float?   // energía predicha por GRU
+  enerWavenet     Float?   // energía predicha por WaveNet
+  enerGbr         Float?   // energía predicha por GBR
+  
+  // Datos de potencia por modelo (MW)
+  potComb         Float?   // potencia combinada
+  potProphet      Float?   // potencia predicha por Prophet
+  potGbr          Float?   // potencia predicha por GBR
+  potGru          Float?   // potencia predicha por GRU
+  potWavenet      Float?   // potencia predicha por WaveNet
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([powerCompany, date, type])
+  @@map("others_data")
+}
+
+// Modelo específico para datos de alumbrado público basado en estructura Excel
+model PublicLightingData {
+  id              Int      @id @default(autoincrement())
+  powerCompany    String   // empresa eléctrica
+  date            DateTime // fecha del registro
+  type            String   // tipo de dato (ej: public_lighting)
+  
+  // Datos de energía por modelo (MWh)
+  enerComb        Float?   // energía combinada
+  enerProphet     Float?   // energía predicha por Prophet
+  enerGru         Float?   // energía predicha por GRU
+  enerWavenet     Float?   // energía predicha por WaveNet
+  enerGbr         Float?   // energía predicha por GBR
+  
+  // Datos de potencia por modelo (MW)
+  potComb         Float?   // potencia combinada
+  potProphet      Float?   // potencia predicha por Prophet
+  potGbr          Float?   // potencia predicha por GBR
+  potGru          Float?   // potencia predicha por GRU
+  potWavenet      Float?   // potencia predicha por WaveNet
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([powerCompany, date, type])
+  @@map("public_lighting_data")
+}
