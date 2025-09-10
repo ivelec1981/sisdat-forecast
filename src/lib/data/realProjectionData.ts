@@ -444,12 +444,8 @@ export const energyData: EnergyRecord[] = [
   { empresa: "CNEL-Guayas Los Rios", cat_uso: "ind", anio: 2024, modelo: "hist", energia: 962676.883 },
   { empresa: "CNEL-Guayas Los Rios", cat_uso: "ind", anio: 2025, modelo: "prophet", energia: 1085656.978 },
 
-  // Datos adicionales para años futuros de empresas clave (2026-2030)
-  { empresa: "E.E. Quito", cat_uso: "res", anio: 2026, modelo: "prophet", energia: 1063234.567 },
-  { empresa: "E.E. Quito", cat_uso: "res", anio: 2027, modelo: "prophet", energia: 1094678.890 },
-  { empresa: "E.E. Quito", cat_uso: "res", anio: 2028, modelo: "prophet", energia: 1126890.123 },
-  { empresa: "E.E. Quito", cat_uso: "res", anio: 2029, modelo: "prophet", energia: 1159967.456 },
-  { empresa: "E.E. Quito", cat_uso: "res", anio: 2030, modelo: "prophet", energia: 1193234.789 },
+  // Datos adicionales para años futuros de empresas clave (2027-2030)
+  // Nota: E.E. Quito 2026-2030 ya están definidos en las líneas 114-118
 
   { empresa: "CNEL-Guayaquil", cat_uso: "res", anio: 2026, modelo: "prophet", energia: 677890.123 },
   { empresa: "CNEL-Guayaquil", cat_uso: "res", anio: 2027, modelo: "prophet", energia: 699234.567 },

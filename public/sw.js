@@ -1,6 +1,7 @@
-const CACHE_NAME = 'sisdat-forecast-v4';
-const STATIC_CACHE = 'sisdat-static-v4';
-const DYNAMIC_CACHE = 'sisdat-dynamic-v4';
+// Desarrollo: Service Worker simplificado
+const CACHE_NAME = 'sisdat-forecast-dev';
+const STATIC_CACHE = 'sisdat-static-dev';
+const DYNAMIC_CACHE = 'sisdat-dynamic-dev';
 
 // Files to cache immediately
 const STATIC_FILES = [

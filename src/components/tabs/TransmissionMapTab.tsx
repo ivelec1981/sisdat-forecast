@@ -4,20 +4,7 @@ import React, { useState } from 'react';
 import { MapPin, Power, Factory, Gauge } from 'lucide-react';
 import MetricCard from '../dashboard/MetricCard';
 import { Station, IndustrialLoad } from '@/types/dashboard';
-import dynamic from 'next/dynamic'; // ✅ IMPORTACIÓN DINÁMICA
-
-// ✅ IMPORTACIÓN DINÁMICA CON SSR DESACTIVADO
-const SimpleMap = dynamic(() => import('../map/SimpleMap'), {
-  ssr: false, // Deshabilita el renderizado en el servidor
-  loading: () => (
-    <div className="flex items-center justify-center h-96 bg-slate-100 rounded-lg">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-        <p className="text-slate-600">Cargando mapa...</p>
-      </div>
-    </div>
-  )
-});
+import EmpresasElectricasMap from '../map/EmpresasElectricasMap';
 
 // ✅ DATOS REALES DEL EXCEL - 10 CARGAS PRINCIPALES
 const cargasReales = [
@@ -163,52 +150,106 @@ interface TransmissionMapTabProps {
 }
 
 export default function TransmissionMapTab({ transmissionData }: TransmissionMapTabProps) {
+  const [selectedEmpresa, setSelectedEmpresa] = useState<any>(null);
   const [selectedCarga, setSelectedCarga] = useState<any>(null);
-  const [voltageFilter, setVoltageFilter] = useState('');
+  const [activeLayer, setActiveLayer] = useState<'empresa' | 'carga' | null>(null);
 
-  // Filtrar cargas
-  const cargasFiltradas = voltageFilter 
-    ? cargasReales.filter(carga => carga.nivel_voltaje_kv.toString() === voltageFilter)
-    : cargasReales;
+  // Datos de empresas eléctricas
+  const empresasData = [
+    { id: 'EME', nombre: 'EMELNORTE', potencia: '102 MW', region: 'Norte', clientes: 425000 },
+    { id: 'RSU', nombre: 'E.E. REGIONAL SUR', potencia: '145 MW', region: 'Sur', clientes: 180000 },
+    { id: 'QUI', nombre: 'E.E. QUITO', potencia: '671 MW', region: 'Pichincha', clientes: 1200000 },
+    { id: 'LRI', nombre: 'CNEL LOS RÍOS', potencia: '76 MW', region: 'Los Ríos', clientes: 320000 },
+    { id: 'ORO', nombre: 'CNEL EL ORO', potencia: '236 MW', region: 'El Oro', clientes: 640000 },
+    { id: 'COT', nombre: 'ELEPCO', potencia: '107 MW', region: 'Cotopaxi', clientes: 280000 },
+    { id: 'RIO', nombre: 'E.E. RIOBAMBA', potencia: '63 MW', region: 'Chimborazo', clientes: 190000 },
+    { id: 'BOL', nombre: 'CNEL LOS BOLÍVAR', potencia: '13 MW', region: 'Bolívar', clientes: 85000 },
+    { id: 'MAN', nombre: 'CNEL MANABÍ', potencia: '311 MW', region: 'Manabí', clientes: 780000 },
+    { id: 'AMB', nombre: 'E.E. AMBATO', potencia: '112 MW', region: 'Tungurahua', clientes: 350000 },
+    { id: 'ESM', nombre: 'CNEL ESMERALDAS', potencia: '91 MW', region: 'Esmeraldas', clientes: 240000 },
+    { id: 'SEL', nombre: 'CNEL SANTA ELENA', potencia: '77 MW', region: 'Santa Elena', clientes: 165000 },
+    { id: 'GYE', nombre: 'CNEL GUAYAQUIL', potencia: '864 MW', region: 'Guayas', clientes: 2100000 },
+    { id: 'MIL', nombre: 'CNEL MILAGRO', potencia: '149 MW', region: 'Guayas', clientes: 385000 },
+    { id: 'GAL', nombre: 'ELECGALÁPAGOS', potencia: '25 MW', region: 'Galápagos', clientes: 32000 },
+    { id: 'SDO', nombre: 'CNEL SANTO DOMINGO', potencia: '121 MW', region: 'Santo Domingo', clientes: 415000 },
+    { id: 'SUC', nombre: 'CNEL SUCUMBÍOS', potencia: '116 MW', region: 'Sucumbíos', clientes: 195000 },
+    { id: 'CSU', nombre: 'E.E. CENTRO SUR', potencia: '176 MW', region: 'Azuay-Cañar', clientes: 485000 },
+    { id: 'AZO', nombre: 'E.E. AZOGUES', potencia: '14 MW', region: 'Cañar', clientes: 68000 },
+    { id: 'GLR', nombre: 'CNEL GUAYAS LOS RÍOS', potencia: '538 MW', region: 'Guayas-Los Ríos', clientes: 965000 }
+  ];
+
+  // Datos de cargas singulares (las mismas del mapa)
+  const cargasData = [
+    { empresa: "CNEL-Bolivar", id_cliente_ext: "Curimining S.A", demanda_maxima: 100764.0, nivel_voltaje_kv: 69 },
+    { empresa: "E.E. Centro Sur", id_cliente_ext: "Minera Loma Larga", demanda_maxima: 110843.2, nivel_voltaje_kv: 69 },
+    { empresa: "E.E. Cotopaxi", id_cliente_ext: "NOVACERO", demanda_maxima: 211189.3, nivel_voltaje_kv: 138 },
+    { empresa: "E.E. Sur", id_cliente_ext: "AURELIAN ECUADOR S.A.", demanda_maxima: 139737.5, nivel_voltaje_kv: 230 },
+    { empresa: "E.E. Sur", id_cliente_ext: "ECUACORRIENTE S.A.", demanda_maxima: 1155000.0, nivel_voltaje_kv: 230 },
+    { empresa: "E.E. Quito", id_cliente_ext: "AGUA Y GAS SILLUNCHI", demanda_maxima: 3066.0, nivel_voltaje_kv: 22.8 },
+    { empresa: "E.E. Quito", id_cliente_ext: "ALLPHAHUB", demanda_maxima: 26280.0, nivel_voltaje_kv: 22.8 },
+    { empresa: "E.E. Norte", id_cliente_ext: "CIUDAD DEL CONOCIMIENTO \"YACHAY\"", demanda_maxima: 53315.0, nivel_voltaje_kv: 69 },
+    { empresa: "CNEL-El Oro", id_cliente_ext: "BRAVITO S.A. - (S/E PRIVADA 69KV) - CAMARONERA", demanda_maxima: 21384.0, nivel_voltaje_kv: 69 },
+    { empresa: "CNEL-Esmeraldas", id_cliente_ext: "EP PETROECUADOR PUERTO BALAO", demanda_maxima: 16856.2, nivel_voltaje_kv: 69 }
+  ];
+
+  // Handlers para selección
+  const handleEmpresaSelect = (empresa: any) => {
+    // Buscar la empresa completa en nuestros datos locales usando el ID
+    const empresaCompleta = empresasData.find(e => e.id === empresa.id);
+    setSelectedEmpresa(empresaCompleta || empresa);
+    setSelectedCarga(null);
+    setActiveLayer('empresa');
+  };
+
+  const handleCargaSelect = (carga: any) => {
+    setSelectedCarga(carga);
+    setSelectedEmpresa(null);
+    setActiveLayer('carga');
+  };
 
   // Estadísticas
-  const totalCargas = cargasReales.length;
-  const empresasUnicas = [...new Set(cargasReales.map(c => c.empresa))];
-  const demandaTotal = cargasReales.reduce((sum, carga) => sum + carga.demanda_total, 0);
-  const voltajesUnicos = [...new Set(cargasReales.map(c => c.nivel_voltaje_kv))].sort((a, b) => a - b);
+  const totalEmpresas = empresasData.length;
+  const totalCargas = cargasData.length;
+  const potenciaTotal = empresasData.reduce((sum, empresa) => {
+    const potencia = parseInt(empresa.potencia.replace(' MW', ''));
+    return sum + potencia;
+  }, 0);
+  const demandaTotal = cargasData.reduce((sum, carga) => sum + carga.demanda_maxima, 0);
+  const clientesTotal = empresasData.reduce((sum, empresa) => sum + empresa.clientes, 0);
+  const regionesUnicas = [...new Set(empresasData.map(e => e.region))].length;
 
   return (
     <div className="space-y-6">
       {/* Métricas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
-          title="Estaciones Activas"
-          value={transmissionData?.stations?.length || 5}
-          change="Sistema de transmisión"
+          title="Empresas Eléctricas"
+          value={totalEmpresas}
+          change="Distribuidoras activas"
           changeType="neutral"
-          icon={MapPin}
+          icon={Factory}
           color="blue"
         />
         <MetricCard
           title="Cargas Singulares"
           value={totalCargas}
-          change={`${empresasUnicas.length} empresas`}
-          changeType="neutral"
-          icon={Factory}
+          change="Grandes consumidores"
+          changeType="positive"
+          icon={Power}
           color="green"
         />
         <MetricCard
-          title="Demanda Total"
-          value={`${(demandaTotal / 1000000).toFixed(1)} TWh`}
-          change="Proyección acumulada real"
+          title="Demanda Singular"
+          value={`${(demandaTotal / 1000).toFixed(0)} GW`}
+          change="Cargas especiales"
           changeType="positive"
-          icon={Power}
+          icon={MapPin}
           color="yellow"
         />
         <MetricCard
-          title="Puntos Visibles"
-          value={cargasFiltradas.length}
-          change={voltageFilter ? "Filtrado" : "Todos"}
+          title="Capa Activa"
+          value={activeLayer === 'empresa' ? 'Empresa' : activeLayer === 'carga' ? 'Carga' : 'Ninguna'}
+          change={activeLayer ? "Seleccionada" : "Hacer clic en el mapa"}
           changeType="positive"
           icon={Gauge}
           color="blue"
@@ -216,93 +257,141 @@ export default function TransmissionMapTab({ transmissionData }: TransmissionMap
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* MAPA CON IMPORTACIÓN DINÁMICA */}
+        {/* MAPA DE EMPRESAS ELÉCTRICAS */}
         <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex justify-between items-center mb-4">
             <div>
               <h3 className="text-lg font-semibold text-slate-900">
-                Mapa de Cargas Singulares - Ecuador
+                Áreas de Cobertura - Empresas Eléctricas del Ecuador
               </h3>
-              <p className="text-sm text-slate-600">Datos reales del Excel - {totalCargas} cargas verificadas</p>
+              <p className="text-sm text-slate-600">Distribución geográfica de las {totalEmpresas} empresas eléctricas</p>
             </div>
-            
-            <select 
-              value={voltageFilter}
-              onChange={(e) => setVoltageFilter(e.target.value)}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
-            >
-              <option value="">Todos los voltajes</option>
-              {voltajesUnicos.map(voltaje => (
-                <option key={voltaje} value={voltaje.toString()}>
-                  {voltaje} kV
-                </option>
-              ))}
-            </select>
           </div>
           
-          {/* ✅ EL COMPONENTE SE CARGA DINÁMICAMENTE */}
-          <SimpleMap 
-            cargas={cargasFiltradas}
-            onCargaSelect={setSelectedCarga}
-          />
+          <div className="h-96">
+            <EmpresasElectricasMap 
+              onEmpresaSelect={handleEmpresaSelect}
+              onCargaSelect={handleCargaSelect}
+              showCargas={true}
+            />
+          </div>
         </div>
 
         {/* Panel lateral */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <h4 className="text-lg font-semibold text-slate-900 mb-4">
-            {selectedCarga ? 'Información de Carga' : 'Seleccionar Punto'}
+            {selectedEmpresa ? 'Información de Empresa' : selectedCarga ? 'Información de Carga' : 'Seleccionar Elemento'}
           </h4>
           
-          {selectedCarga ? (
+          {selectedEmpresa ? (
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-slate-600">Empresa</p>
+                <p className="font-medium text-slate-900 text-sm">{selectedEmpresa.nombre}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-600">Región de Cobertura</p>
+                <p className="font-medium text-slate-900">{selectedEmpresa.region}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-sm text-slate-600">Potencia</p>
+                  <p className="font-medium text-blue-600 text-lg">{selectedEmpresa.potencia}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-600">Código</p>
+                  <p className="font-medium text-slate-900">{selectedEmpresa.id}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-slate-600">Clientes Estimados</p>
+                <p className="font-medium text-green-600 text-xl">
+                  {selectedEmpresa.clientes?.toLocaleString('es-EC') || 'N/A'}
+                </p>
+              </div>
+              <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-800 font-medium">🗺️ Área de Cobertura</p>
+                <p className="text-xs text-blue-600 mt-1">Empresa distribuidora de energía eléctrica</p>
+              </div>
+              
+              {/* Estadísticas adicionales */}
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <p className="text-sm text-slate-600 mb-2">Participación en el sistema:</p>
+                <div className="w-full bg-slate-200 rounded-full h-2">
+                  <div 
+                    className="bg-blue-600 h-2 rounded-full" 
+                    style={{ 
+                      width: `${selectedEmpresa.potencia && potenciaTotal > 0 ? (parseInt(selectedEmpresa.potencia.replace(' MW', '')) / potenciaTotal * 100) : 0}%` 
+                    }}
+                  ></div>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  {selectedEmpresa.potencia && potenciaTotal > 0 ? ((parseInt(selectedEmpresa.potencia.replace(' MW', '')) / potenciaTotal) * 100).toFixed(1) : 0}% del total
+                </p>
+              </div>
+            </div>
+          ) : selectedCarga ? (
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-slate-600">Cliente</p>
                 <p className="font-medium text-slate-900 text-sm">{selectedCarga.id_cliente_ext}</p>
               </div>
               <div>
-                <p className="text-sm text-slate-600">Empresa</p>
+                <p className="text-sm text-slate-600">Empresa Distribuidora</p>
                 <p className="font-medium text-slate-900">{selectedCarga.empresa}</p>
-              </div>
-              <div>
-                <p className="text-sm text-slate-600">Subestación</p>
-                <p className="font-medium text-slate-900 text-sm">{selectedCarga.s_e_asociada}</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-sm text-slate-600">Voltaje</p>
-                  <p className="font-medium text-slate-900">{selectedCarga.nivel_voltaje_kv} kV</p>
+                  <p className="font-medium text-blue-600 text-lg">{selectedCarga.nivel_voltaje_kv} kV</p>
                 </div>
                 <div>
-                  <p className="text-sm text-slate-600">Sector</p>
-                  <p className="font-medium text-slate-900">{selectedCarga.sector}</p>
+                  <p className="text-sm text-slate-600">Tipo</p>
+                  <p className="font-medium text-slate-900">{selectedCarga.nivel_voltaje_kv > 100 ? 'Alta Tensión' : 'Media Tensión'}</p>
                 </div>
-              </div>
-              <div>
-                <p className="text-sm text-slate-600">Tarifa</p>
-                <p className="font-medium text-slate-900">{selectedCarga.tarifa}</p>
               </div>
               <div>
                 <p className="text-sm text-slate-600">Demanda Máxima</p>
-                <p className="font-medium text-blue-600 text-xl">
-                  {selectedCarga.demanda_maxima.toLocaleString('es-EC')} MWh
+                <p className="font-medium text-red-600 text-xl">
+                  {selectedCarga.demanda_maxima?.toLocaleString('es-EC') || 'N/A'} MW
                 </p>
               </div>
-              <div>
-                <p className="text-sm text-slate-600">Período</p>
-                <p className="font-medium text-slate-900">{selectedCarga.years_range}</p>
+              <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                <p className="text-sm text-amber-800 font-medium">⚡ Carga Singular</p>
+                <p className="text-xs text-amber-600 mt-1">Gran consumidor industrial/comercial</p>
               </div>
-              <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                <p className="text-sm text-green-800 font-medium">✅ Datos verificados del Excel</p>
-                <p className="text-xs text-green-600 mt-1">plantilla_migracion_postgres 1.xlsx</p>
+              
+              {/* Estadísticas de la carga */}
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <p className="text-sm text-slate-600 mb-2">Participación en demanda singular:</p>
+                <div className="w-full bg-slate-200 rounded-full h-2">
+                  <div 
+                    className="bg-red-600 h-2 rounded-full" 
+                    style={{ 
+                      width: `${selectedCarga.demanda_maxima && demandaTotal > 0 ? Math.min((selectedCarga.demanda_maxima / demandaTotal) * 100, 100) : 0}%` 
+                    }}
+                  ></div>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  {selectedCarga.demanda_maxima && demandaTotal > 0 ? ((selectedCarga.demanda_maxima / demandaTotal) * 100).toFixed(1) : 0}% del total de cargas singulares
+                </p>
               </div>
             </div>
           ) : (
             <div className="text-center py-8">
-              <MapPin className="mx-auto text-slate-400 mb-3" size={48} />
-              <p className="text-slate-500">
-                Haz clic en un punto del mapa para ver información detallada
-              </p>
-              <p className="text-xs text-green-600 mt-2">✅ {totalCargas} cargas reales del Excel</p>
+              <div className="flex flex-col items-center space-y-4">
+                <div className="flex space-x-4">
+                  <Factory className="text-blue-400" size={32} />
+                  <Power className="text-amber-400" size={32} />
+                </div>
+                <div className="text-center">
+                  <p className="text-slate-500 mb-2">
+                    Haz clic en el mapa para ver información detallada
+                  </p>
+                  <p className="text-xs text-blue-600">🏢 {totalEmpresas} empresas distribuidoras</p>
+                  <p className="text-xs text-amber-600">⚡ {totalCargas} cargas singulares</p>
+                </div>
+              </div>
             </div>
           )}
         </div>

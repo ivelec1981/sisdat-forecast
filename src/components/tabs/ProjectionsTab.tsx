@@ -170,7 +170,8 @@ export default function ProjectionsTab() {
                 strokeWidth={2}
                 dot={(props) => {
                   const isHistorical = props.payload?.type === 'historical';
-                  const uniqueKey = `dot-${props.payload?.year || 'unknown'}-${props.payload?.value || 'default'}-${isHistorical ? 'hist' : 'pred'}`;
+                  const pointIndex = props.index || 0;
+                  const uniqueKey = `dot-${pointIndex}-${props.payload?.year || 'unknown'}-${isHistorical ? 'hist' : 'pred'}`;
                   return (
                     <circle 
                       key={uniqueKey}
