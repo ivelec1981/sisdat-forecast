@@ -57,6 +57,14 @@ const AppleButton = React.forwardRef<HTMLButtonElement, AppleButtonProps>(
     loadingText,
     children, 
     disabled,
+    onDrag,
+    onDragEnd,
+    onDragStart,
+    onDrop,
+    onAnimationStart,
+    onAnimationEnd,
+    onAnimationIteration,
+    onTransitionEnd,
     ...props 
   }, ref) => {
     return (

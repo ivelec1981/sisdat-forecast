@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import * as Sentry from '@sentry/nextjs';
 
 export interface User {
   id: string;

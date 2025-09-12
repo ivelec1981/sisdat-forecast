@@ -111,11 +111,11 @@ export default function AuthLayout({
               {organizations.map((org, index) => (
                 <motion.span
                   key={org}
-                  className="px-4 py-2 bg-white/10 backdrop-blur-md rounded-full border border-white/20 text-sm font-medium"
+                  className="px-4 py-2 bg-white/10 backdrop-blur-md rounded-full border border-white/20 text-sm font-medium hover:bg-white/20 transition-colors"
                   initial={{ scale: 0, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ delay: 1 + index * 0.1, duration: 0.3 }}
-                  whileHover={{ scale: 1.05, bg: "rgba(255,255,255,0.2)" }}
+                  whileHover={{ scale: 1.05 }}
                 >
                   {org}
                 </motion.span>

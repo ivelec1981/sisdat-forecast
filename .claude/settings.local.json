@@ -1,5 +1,21 @@
 {
   "permissions": {
+    "allow": [
+      "Bash(npm run type-check:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run build:*)",
+      "Bash(git add:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run dev:*)",
+      "Bash(git restore:*)",
+      "Bash(pkill:*)",
+      "Bash(curl:*)",
+      "Read(//mnt/c/Windows/System32/drivers/etc/**)",
+      "Bash(npm install:*)",
+      "Bash(node:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)"
+    ],
     "additionalDirectories": [
       "/mnt/c/Users/LEGION/Maestria BigData/Trabajo Titulacion/ev_simulation"
     ]

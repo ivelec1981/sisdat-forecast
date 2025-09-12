@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TrendingUp, BarChart3, Map, Activity, BookOpen, ChevronLeft, ChevronRight, Sun, Moon } from 'lucide-react';
-import Image from 'next/image';
 import { useTheme } from '@/contexts/ThemeContext';
+import SisdatLogo from '@/components/ui/SisdatLogo';
 
 interface SidebarProps {
   activeTab: string;
@@ -55,10 +55,10 @@ export default function Sidebar({ activeTab, setActiveTab, mobile = false, isCol
         <motion.div 
           className={`mb-8 ${isCollapsed ? 'text-center' : ''}`}
           animate={{ 
-            scale: isCollapsed ? 0.8 : 1,
+            scale: isCollapsed ? 0.9 : 1,
             opacity: 1
           }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
         >
           <AnimatePresence mode="wait">
             {isCollapsed ? (
@@ -68,15 +68,12 @@ export default function Sidebar({ activeTab, setActiveTab, mobile = false, isCol
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.5 }}
                 transition={{ duration: 0.3, ease: "easeOut" }}
-                className="w-12 h-12 flex items-center justify-center mx-auto"
+                className="flex justify-center mx-auto"
               >
-                <Image 
-                  src="/logosisdat1.png" 
-                  alt="SISDAT Logo" 
-                  width={40} 
-                  height={40}
-                  className="object-contain"
-                  style={{ width: "auto", height: "auto" }}
+                <SisdatLogo 
+                  variant="compact" 
+                  priority 
+                  animated={false}
                 />
               </motion.div>
             ) : (
@@ -86,22 +83,13 @@ export default function Sidebar({ activeTab, setActiveTab, mobile = false, isCol
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
-                className="flex flex-col items-center"
+                className="flex flex-col items-center px-4"
               >
-                <motion.div
-                  whileHover={{ scale: 1.08 }}
-                  transition={{ duration: 0.3, ease: "easeOut" }}
-                  className="flex items-center justify-center"
-                >
-                  <Image 
-                    src="/logosisdat1.png" 
-                    alt="SISDAT Logo" 
-                    width={180} 
-                    height={180}
-                    className="object-contain"
-                    style={{ width: "auto", height: "auto" }}
-                  />
-                </motion.div>
+                <SisdatLogo 
+                  variant="full" 
+                  priority 
+                  animated={true}
+                />
               </motion.div>
             )}
           </AnimatePresence>

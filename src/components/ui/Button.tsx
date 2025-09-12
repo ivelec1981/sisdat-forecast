@@ -65,6 +65,14 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     children, 
     disabled,
     asChild = false,
+    onDrag,
+    onDragEnd,
+    onDragStart,
+    onDrop,
+    onAnimationStart,
+    onAnimationEnd,
+    onAnimationIteration,
+    onTransitionEnd,
     ...props 
   }, ref) => {
     const buttonAnimations = {

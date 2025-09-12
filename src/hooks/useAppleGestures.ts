@@ -75,21 +75,21 @@ export function useAppleGestures({
   }, []);
 
   // Pull to refresh spring animation
-  const pullToRefreshSpring = useSpring({
-    y: y.get(),
-    config: { tension: 300, friction: 30 }
+  const pullToRefreshSpring = useSpring(y, {
+    stiffness: 300,
+    damping: 30
   });
 
   // Swipe navigation spring animation  
-  const swipeSpring = useSpring({
-    x: x.get(),
-    config: { tension: 300, friction: 30 }
+  const swipeSpring = useSpring(x, {
+    stiffness: 300,
+    damping: 30
   });
 
   // Pinch zoom spring animation
-  const pinchSpring = useSpring({
-    scale: scale.get(),
-    config: { tension: 300, friction: 30 }
+  const pinchSpring = useSpring(scale, {
+    stiffness: 300,
+    damping: 30
   });
 
   // Pull to refresh drag handler
@@ -335,6 +335,10 @@ export function useDeviceCapabilities() {
   const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
   const isAndroid = typeof navigator !== 'undefined' && /Android/.test(navigator.userAgent);
   const isMobile = hasTouch && (isIOS || isAndroid);
+  const isTablet = typeof navigator !== 'undefined' && (
+    /iPad/.test(navigator.userAgent) || 
+    (/Android/.test(navigator.userAgent) && !/Mobile/.test(navigator.userAgent))
+  );
   const supportsPassive = typeof window !== 'undefined' && (() => {
     let supportsPassive = false;
     try {
@@ -356,6 +360,7 @@ export function useDeviceCapabilities() {
     isIOS,
     isAndroid,
     isMobile,
+    isTablet,
     supportsPassive,
     preferReducedMotion: typeof window !== 'undefined' && 
       window.matchMedia('(prefers-reduced-motion: reduce)').matches,

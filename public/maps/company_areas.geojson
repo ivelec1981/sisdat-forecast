@@ -1,0 +1,26 @@
+
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "companyName": "EMELNORTE",
+        "id": "EME",
+        "potencia": "102 MW"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-78.5, 0.5],
+            [-78.0, 0.5],
+            [-78.0, 0.0],
+            [-78.5, 0.0],
+            [-78.5, 0.5]
+          ]
+        ]
+      }
+    }
+  ]
+}

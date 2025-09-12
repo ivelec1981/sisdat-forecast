@@ -62,6 +62,14 @@ const AppleInput = React.forwardRef<HTMLInputElement, AppleInputProps>(
     onFocus,
     onBlur,
     onChange,
+    onDrag,
+    onDragEnd,
+    onDragStart,
+    onDrop,
+    onAnimationStart,
+    onAnimationEnd,
+    onAnimationIteration,
+    onTransitionEnd,
     ...props 
   }, ref) => {
     const [showPassword, setShowPassword] = useState(false);
