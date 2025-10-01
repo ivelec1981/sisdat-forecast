@@ -49,23 +49,36 @@ export function useMultiHorizonData({
 
   // Función para convertir datos existentes al formato multi-horizonte
   const convertExistingData = useCallback(() => {
-    const historicalData = [];
+    const historicalData: Array<{
+      company: string;
+      sector: string;
+      year: number;
+      month: number;
+      energy: number;
+      models: {
+        prophet: number | null;
+        gru: number | null;
+        wavenet: number | null;
+        gbr: number | null;
+        ensemble: number | null;
+      };
+    }> = [];
 
     // Convertir datos residenciales
     if (residentialData) {
       residentialData.forEach(item => {
         historicalData.push({
-          company: item.powerCompany,
+          company: item.company,
           sector: 'residential',
-          year: item.date.getFullYear(),
-          month: item.date.getMonth() + 1,
-          energy: item.enerComb || item.enerProphet || 0,
+          year: item.year,
+          month: item.month,
+          energy: item.energy.comb || item.energy.prophet || 0,
           models: {
-            prophet: item.enerProphet,
-            gru: item.enerGru,
-            wavenet: item.enerWavenet,
-            gbr: item.enerGbr,
-            ensemble: item.enerComb
+            prophet: item.energy.prophet,
+            gru: item.energy.gru,
+            wavenet: item.energy.wavenet,
+            gbr: item.energy.gbr,
+            ensemble: item.energy.comb
           }
         });
       });
@@ -75,17 +88,17 @@ export function useMultiHorizonData({
     if (commercialData) {
       commercialData.forEach(item => {
         historicalData.push({
-          company: item.powerCompany,
+          company: item.company,
           sector: 'commercial',
-          year: item.date.getFullYear(),
-          month: item.date.getMonth() + 1,
-          energy: item.enerComb || item.enerProphet || 0,
+          year: item.year,
+          month: item.month,
+          energy: item.energy.comb || item.energy.prophet || 0,
           models: {
-            prophet: item.enerProphet,
-            gru: item.enerGru,
-            wavenet: item.enerWavenet,
-            gbr: item.enerGbr,
-            ensemble: item.enerComb
+            prophet: item.energy.prophet,
+            gru: item.energy.gru,
+            wavenet: item.energy.wavenet,
+            gbr: item.energy.gbr,
+            ensemble: item.energy.comb
           }
         });
       });
@@ -95,17 +108,17 @@ export function useMultiHorizonData({
     if (industrialData) {
       industrialData.forEach(item => {
         historicalData.push({
-          company: item.powerCompany,
+          company: item.company,
           sector: 'industrial',
-          year: item.date.getFullYear(),
-          month: item.date.getMonth() + 1,
-          energy: item.enerComb || item.enerProphet || 0,
+          year: item.year,
+          month: item.month,
+          energy: item.energy.comb || item.energy.prophet || 0,
           models: {
-            prophet: item.enerProphet,
-            gru: item.enerGru,
-            wavenet: item.enerWavenet,
-            gbr: item.enerGbr,
-            ensemble: item.enerComb
+            prophet: item.energy.prophet,
+            gru: item.energy.gru,
+            wavenet: item.energy.wavenet,
+            gbr: item.energy.gbr,
+            ensemble: item.energy.comb
           }
         });
       });

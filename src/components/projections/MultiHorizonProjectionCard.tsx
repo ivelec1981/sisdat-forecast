@@ -358,7 +358,7 @@ export default function MultiHorizonProjectionCard({
                       Advertencias
                     </h5>
                     <ul className="text-sm text-yellow-700 space-y-1">
-                      {metadata.warnings.map((warning, index) => (
+                      {metadata.warnings.map((warning: string, index: number) => (
                         <li key={index}>• {warning}</li>
                       ))}
                     </ul>
@@ -369,7 +369,7 @@ export default function MultiHorizonProjectionCard({
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                     <h5 className="font-medium text-blue-800 mb-2">💡 Recomendaciones</h5>
                     <ul className="text-sm text-blue-700 space-y-1">
-                      {metadata.recommendations.map((recommendation, index) => (
+                      {metadata.recommendations.map((recommendation: string, index: number) => (
                         <li key={index}>• {recommendation}</li>
                       ))}
                     </ul>
@@ -453,7 +453,7 @@ export default function MultiHorizonProjectionCard({
                         <div className="text-sm space-y-1">
                           <div className="flex justify-between">
                             <span>Valor Original:</span>
-                            <span>{Object.values(projection.predictions).find(v => v !== undefined)?.toFixed(2)} MWh</span>
+                            <span>{(Object.values(projection.predictions).find(v => v !== undefined) as number | undefined)?.toFixed(2) ?? 'N/A'} MWh</span>
                           </div>
                           {projection.reconciledValue && (
                             <div className="flex justify-between">

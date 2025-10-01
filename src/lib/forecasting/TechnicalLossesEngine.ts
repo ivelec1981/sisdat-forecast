@@ -109,7 +109,13 @@ const TechnicalLossInputSchema = z.object({
     includeEfficiencyImprovements: z.boolean().default(true),
     climaticAdjustment: z.boolean().default(true),
     maintenanceScenario: z.enum(['current', 'improved', 'optimized']).default('current')
-  }).default({})
+  }).default({
+    includeLoadGrowth: true,
+    includeInfrastructureAging: true,
+    includeEfficiencyImprovements: true,
+    climaticAdjustment: true,
+    maintenanceScenario: 'current' as const
+  })
 });
 
 export type TechnicalLossInput = z.infer<typeof TechnicalLossInputSchema>;
@@ -137,9 +143,9 @@ export interface LossModelParameters {
 
 export class TechnicalLossesEngine {
   private static instance: TechnicalLossesEngine;
-  private modelParameters: LossModelParameters;
+  private modelParameters: LossModelParameters = {} as LossModelParameters;
   private projectionHistory: Map<string, TechnicalLossProjection[]> = new Map();
-  
+
   private constructor() {
     this.initializeModelParameters();
   }
@@ -318,7 +324,11 @@ export class TechnicalLossesEngine {
     baseline: LossComponent,
     network: any,
     yearsFromBaseline: number,
-    parameters: any
+    parameters: {
+      includeInfrastructureAging: boolean;
+      maintenanceScenario: 'current' | 'improved' | 'optimized';
+      includeEfficiencyImprovements: boolean;
+    }
   ): TechnicalLossProjection['fixedLosses'] {
     let baseFixedPercentage = baseline.value * 0.3; // 30% son pérdidas fijas típicamente
     
@@ -329,11 +339,12 @@ export class TechnicalLossesEngine {
     }
     
     // Efecto del mantenimiento
-    const maintenanceMultiplier = {
+    const maintenanceMultipliers: Record<'current' | 'improved' | 'optimized', number> = {
       'current': 1.0,
       'improved': 0.95,
       'optimized': 0.90
-    }[parameters.maintenanceScenario];
+    };
+    const maintenanceMultiplier = maintenanceMultipliers[parameters.maintenanceScenario];
     
     baseFixedPercentage *= maintenanceMultiplier;
     

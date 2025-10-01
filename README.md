@@ -155,10 +155,57 @@ npm run db:push      # Push schema changes
 npm run db:seed      # Seed initial data
 npm run db:studio    # Open database studio
 
-# Utilities  
+# Utilities
 npm run lint         # Run ESLint
 npm run type-check   # TypeScript type checking
 ```
+
+## 🐛 Troubleshooting
+
+### Service Worker Issues (ChunkLoadError, Failed to fetch)
+
+If you encounter errors like:
+- `Failed to fetch` for `_next/static/chunks/*` files
+- `ChunkLoadError: Loading chunk failed`
+- `TypeError: Failed to fetch` in `sw.js`
+
+**Quick Fix:**
+
+1. Visit `http://localhost:3000/clear-sw.html`
+2. Click "Limpiar Todo y Recargar" (Clear All and Reload)
+3. Refresh your browser
+
+**Manual Fix:**
+
+```bash
+# In DevTools Console (F12)
+# 1. Unregister all service workers
+navigator.serviceWorker.getRegistrations().then(regs => {
+  regs.forEach(reg => reg.unregister())
+})
+
+# 2. Clear all caches
+caches.keys().then(names => {
+  names.forEach(name => caches.delete(name))
+})
+
+# 3. Hard refresh (Ctrl+Shift+R or Cmd+Shift+R)
+```
+
+**Why this happens:**
+
+The Service Worker caches assets for offline functionality (PWA). In development, dynamic imports and hot module replacement can conflict with the cache. The updated Service Worker now:
+
+- Skips `/_next/` routes in development (no caching)
+- Caches `/_next/static/` only in production
+- Auto-updates every 60 seconds
+- Reloads page when new SW version activates
+
+**Prevention:**
+
+- Use `clear-sw.html` tool after major updates
+- Keep Service Worker disabled in DevTools during active development
+- Run `npm run build` before testing PWA features
 
 ## 🚀 Deployment
 

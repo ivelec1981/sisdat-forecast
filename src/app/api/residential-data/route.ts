@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma, QueryCache } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,14 +8,23 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const limit = searchParams.get('limit');
-    
+
+    // Build cache key
+    const cacheKey = `residential:${company || 'all'}:${startDate || ''}:${endDate || ''}:${limit || 'all'}`;
+
+    // Check cache
+    const cached = QueryCache.get<any>(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached);
+    }
+
     // Build where clause
     const where: any = {};
-    
+
     if (company) {
       where.powerCompany = company;
     }
-    
+
     if (startDate || endDate) {
       where.date = {};
       if (startDate) {
@@ -27,31 +34,47 @@ export async function GET(request: NextRequest) {
         where.date.lte = new Date(endDate);
       }
     }
-    
-    // Get residential data
-    const residentialData = await prisma.residentialData.findMany({
-      where,
-      orderBy: { date: 'asc' },
-      take: limit ? parseInt(limit) : undefined
-    });
-    
-    // Get summary statistics
-    const summary = await prisma.residentialData.aggregate({
-      where,
-      _count: { id: true },
-      _avg: {
-        enerProphet: true,
-        potProphet: true
-      },
-      _min: { date: true },
-      _max: { date: true }
-    });
-    
-    // Get companies
-    const companies = await prisma.residentialData.groupBy({
-      by: ['powerCompany'],
-      _count: { powerCompany: true }
-    });
+
+    // Get residential data with optimized query
+    const [residentialData, summary, companies] = await Promise.all([
+      prisma.residentialData.findMany({
+        where,
+        orderBy: { date: 'asc' },
+        take: limit ? parseInt(limit) : undefined,
+        select: {
+          date: true,
+          powerCompany: true,
+          type: true,
+          enerComb: true,
+          enerProphet: true,
+          enerGru: true,
+          enerWavenet: true,
+          enerGbr: true,
+          potComb: true,
+          potProphet: true,
+          potGbr: true,
+          potGru: true,
+          potWavenet: true,
+        }
+      }),
+      // Get summary statistics
+      prisma.residentialData.aggregate({
+        where,
+        _count: { id: true },
+        _avg: {
+          enerProphet: true,
+          potProphet: true
+        },
+        _min: { date: true },
+        _max: { date: true }
+      }),
+      // Get companies
+      prisma.residentialData.groupBy({
+        by: ['powerCompany'],
+        where,
+        _count: { powerCompany: true }
+      })
+    ]);
     
     // Format data for charts
     const chartData = residentialData.map(record => ({
@@ -101,8 +124,8 @@ export async function GET(request: NextRequest) {
     Object.values(yearlyData).forEach((yearData: any) => {
       yearData.avgPower = yearData.avgPower / yearData.recordCount;
     });
-    
-    return NextResponse.json({
+
+    const response = {
       success: true,
       data: chartData,
       summary: {
@@ -119,7 +142,12 @@ export async function GET(request: NextRequest) {
         }))
       },
       yearlyTrends: Object.values(yearlyData).sort((a: any, b: any) => a.year - b.year)
-    });
+    };
+
+    // Cache response for 5 minutes
+    QueryCache.set(cacheKey, response, 5 * 60 * 1000);
+
+    return NextResponse.json(response);
     
   } catch (error) {
     console.error('Error fetching residential data:', error);

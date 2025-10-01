@@ -89,11 +89,32 @@ const TLPInputSchema = z.object({
       season: z.number().min(0).max(2).default(0.6),
       temperature: z.number().min(0).max(2).default(0.4),
       loadMagnitude: z.number().min(0).max(2).default(1.2)
-    }).default({}),
+    }).default({
+      hour: 1.0,
+      dayType: 0.8,
+      season: 0.6,
+      temperature: 0.4,
+      loadMagnitude: 1.2
+    }),
     distanceMetric: z.enum(['euclidean', 'manhattan', 'cosine']).default('euclidean'),
     enableSeasonalAdjustment: z.boolean().default(true),
     minClusterSize: z.number().min(5).max(100).default(20)
-  }).default({})
+  }).default({
+    numberOfClusters: 6,
+    maxIterations: 300,
+    convergenceTolerance: 1e-5,
+    initializationMethod: 'kmeans++' as const,
+    featureWeights: {
+      hour: 1.0,
+      dayType: 0.8,
+      season: 0.6,
+      temperature: 0.4,
+      loadMagnitude: 1.2
+    },
+    distanceMetric: 'euclidean' as const,
+    enableSeasonalAdjustment: true,
+    minClusterSize: 20
+  })
 });
 
 export type TLPInput = z.infer<typeof TLPInputSchema>;
@@ -169,10 +190,10 @@ export class TypicalLoadProfilesEngine {
     config: ClusteringConfiguration
   ): Promise<TypicalLoadProfile[]> {
     const dailyProfiles = this.extractDailyProfiles(groupData);
-    
-    if (dailyProfiles.length < config.numberOfClusters) {
-      console.warn(`Grupo ${groupKey}: ajustando clusters de ${config.numberOfClusters} a ${dailyProfiles.length}`);
-      config.numberOfClusters = Math.max(1, Math.floor(dailyProfiles.length / 2));
+
+    if (dailyProfiles.size < config.numberOfClusters) {
+      console.warn(`Grupo ${groupKey}: ajustando clusters de ${config.numberOfClusters} a ${dailyProfiles.size}`);
+      config.numberOfClusters = Math.max(1, Math.floor(dailyProfiles.size / 2));
     }
 
     const clusterResults = await this.performKMeansClustering(dailyProfiles, config);

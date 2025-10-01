@@ -44,7 +44,13 @@ const IPFInputSchema = z.object({
     minCellValue: z.number().min(0).default(1e-8),
     maxCellValue: z.number().optional(),
     enableLogging: z.boolean().default(false)
-  }).default({})
+  }).default({
+    maxIterations: 1000,
+    convergenceTolerance: 1e-6,
+    dampingFactor: 0.8,
+    minCellValue: 1e-8,
+    enableLogging: false
+  })
 });
 
 export type IPFInput = z.infer<typeof IPFInputSchema>;

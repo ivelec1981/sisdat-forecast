@@ -302,11 +302,20 @@ const EmpresasElectricasMapWithLeaflet = memo(function EmpresasElectricasMapWith
             </div>
           </div>
         </div>
-      `);
+      `, {
+        autoPan: false,  // Prevent automatic panning
+        keepInView: false, // Don't keep in view
+        closeButton: true,
+        maxWidth: 300
+      });
 
       marker.on('mouseover', () => setHoveredCarga(carga.id_cliente_ext));
       marker.on('mouseout', () => setHoveredCarga(null));
-      marker.on('click', () => handleCargaClick(index));
+      marker.on('click', (e: any) => {
+        // Prevent default behavior and stop propagation
+        L.DomEvent.stopPropagation(e);
+        handleCargaClick(index);
+      });
     });
 
     if (cargasData.length > 0 && showCargas) {
@@ -439,12 +448,20 @@ const EmpresasElectricasMapWithLeaflet = memo(function EmpresasElectricasMapWith
           attributionControl: true,
           preferCanvas: false,
           maxZoom: 18,
-          minZoom: 2
+          minZoom: 2,
+          scrollWheelZoom: true,
+          doubleClickZoom: true,
+          boxZoom: true,
+          keyboard: true,
+          dragging: true,
+          zoomAnimation: false, // Disable zoom animation to prevent scroll issues
+          fadeAnimation: false, // Disable fade animation
+          markerZoomAnimation: false // Disable marker zoom animation
         });
         console.log(`✅ Mapa creado exitosamente en ${uniqueId}`);
       } catch (mapCreationError) {
         console.error('Error al crear el mapa:', mapCreationError);
-        throw new Error(`No se pudo crear el mapa: ${mapCreationError.message}`);
+        throw new Error(`No se pudo crear el mapa: ${mapCreationError instanceof Error ? mapCreationError.message : String(mapCreationError)}`);
       }
 
       // Añadir capas base
@@ -479,7 +496,7 @@ const EmpresasElectricasMapWithLeaflet = memo(function EmpresasElectricasMapWith
       const invalidateMapSize = () => {
         if (map && mapInstanceRef.current && map._container && map._container._leaflet_pos !== undefined) {
           try {
-            map.invalidateSize(true);
+            map.invalidateSize(false); // false = no animation to prevent scroll
           } catch (err) {
             console.warn('Error al invalidar tamaño del mapa:', err);
           }
@@ -498,7 +515,7 @@ const EmpresasElectricasMapWithLeaflet = memo(function EmpresasElectricasMapWith
         setTimeout(() => {
           if (map && mapInstanceRef.current && map._container && map._container._leaflet_pos !== undefined) {
             try {
-              map.invalidateSize(true);
+              map.invalidateSize(false); // false = no animation to prevent scroll
             } catch (err) {
               console.warn('Error al invalidar tamaño del mapa en resize:', err);
             }
@@ -551,8 +568,14 @@ const EmpresasElectricasMapWithLeaflet = memo(function EmpresasElectricasMapWith
 
   useEffect(() => {
     if (mapInstance && L) {
-      fetchAndValidateGeoJSON('/maps/company_areas_fixed.geojson')
+      // Enable detailed logging for first error in development
+      const geoJsonPath = '/maps/company_areas_fixed.geojson';
+      console.log(`🗺️ Loading GeoJSON from: ${geoJsonPath}`);
+
+      fetchAndValidateGeoJSON(geoJsonPath)
         .then(validatedData => {
+          console.log(`✅ GeoJSON loaded successfully: ${validatedData.features.length} features`);
+
           if (geoJsonLayerRef.current) {
             mapInstance.removeLayer(geoJsonLayerRef.current);
           }
@@ -578,9 +601,13 @@ const EmpresasElectricasMapWithLeaflet = memo(function EmpresasElectricasMapWith
               layer.on({
                 mouseover: () => setHoveredEmpresa(feature.properties.id),
                 mouseout: () => setHoveredEmpresa(null),
-                click: () => handleEmpresaClick(feature.properties.id)
+                click: (e: any) => {
+                  // Prevent default behavior and stop propagation
+                  L.DomEvent.stopPropagation(e);
+                  handleEmpresaClick(feature.properties.id);
+                }
               });
-              
+
               // Enhanced popup with better styling and more information
               const popup = `
                 <div class="p-4 min-w-[280px]">
@@ -588,31 +615,31 @@ const EmpresasElectricasMapWithLeaflet = memo(function EmpresasElectricasMapWith
                     <div class="w-4 h-4 rounded" style="background-color: ${getRegionColor(feature.properties.region)}"></div>
                     <h4 class="font-bold text-base text-gray-800">${feature.properties.companyName}</h4>
                   </div>
-                  
+
                   <div class="grid grid-cols-2 gap-3 text-sm">
                     <div class="bg-blue-50 p-2 rounded">
                       <div class="text-blue-600 font-medium">Código</div>
                       <div class="text-gray-800 font-bold">${feature.properties.id}</div>
                     </div>
-                    
+
                     <div class="bg-green-50 p-2 rounded">
                       <div class="text-green-600 font-medium">Potencia</div>
                       <div class="text-gray-800 font-bold">${feature.properties.potencia}</div>
                     </div>
                   </div>
-                  
+
                   <div class="mt-3 space-y-2 text-sm">
                     <div class="flex justify-between">
                       <span class="text-gray-600">Región:</span>
                       <span class="font-medium text-gray-800">${feature.properties.region || 'N/A'}</span>
                     </div>
-                    
+
                     <div class="flex justify-between">
                       <span class="text-gray-600">Clientes:</span>
                       <span class="font-medium text-gray-800">${feature.properties.clientes ? feature.properties.clientes.toLocaleString('es-EC') : 'N/A'}</span>
                     </div>
                   </div>
-                  
+
                   <div class="mt-3 pt-2 border-t border-gray-200">
                     <div class="text-xs text-gray-500 text-center">
                       🏭 Área de Concesión • 📊 Empresa Distribuidora
@@ -620,7 +647,14 @@ const EmpresasElectricasMapWithLeaflet = memo(function EmpresasElectricasMapWith
                   </div>
                 </div>
               `;
-              layer.bindPopup(popup);
+
+              // Bind popup with options to prevent auto-pan
+              layer.bindPopup(popup, {
+                autoPan: false,  // Prevent automatic panning
+                keepInView: false, // Don't keep in view
+                closeButton: true,
+                maxWidth: 300
+              });
             }
           }).addTo(mapInstance);
           

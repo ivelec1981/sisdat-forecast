@@ -78,10 +78,10 @@ export default function ExampleUsageComponent() {
     if (!residentialData || !simpleResult) return null;
 
     // Obtener último año histórico
-    const lastHistoricalYear = Math.max(...residentialData.map(d => d.date.getFullYear()));
+    const lastHistoricalYear = Math.max(...residentialData.map(d => d.year));
     const lastHistoricalValue = residentialData
-      .filter(d => d.date.getFullYear() === lastHistoricalYear)
-      .reduce((sum, d) => sum + (d.enerComb || 0), 0);
+      .filter(d => d.year === lastHistoricalYear)
+      .reduce((sum, d) => sum + (d.energy.comb || 0), 0);
 
     // Comparar con primera proyección
     const firstProjectionYear = Math.min(...simpleResult.projections.map(p => p.year));

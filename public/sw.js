@@ -1,7 +1,10 @@
-// Desarrollo: Service Worker simplificado
-const CACHE_NAME = 'sisdat-forecast-dev';
-const STATIC_CACHE = 'sisdat-static-dev';
-const DYNAMIC_CACHE = 'sisdat-dynamic-dev';
+// Service Worker for SISDAT Forecast
+// Detects environment and adjusts caching strategy accordingly
+const IS_DEV = self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1';
+const VERSION = '2.1.0';
+const CACHE_NAME = `sisdat-forecast-${IS_DEV ? 'dev' : 'prod'}-v${VERSION}`;
+const STATIC_CACHE = `sisdat-static-${IS_DEV ? 'dev' : 'prod'}-v${VERSION}`;
+const DYNAMIC_CACHE = `sisdat-dynamic-${IS_DEV ? 'dev' : 'prod'}-v${VERSION}`;
 
 // Files to cache immediately
 const STATIC_FILES = [
@@ -80,6 +83,24 @@ self.addEventListener('fetch', (event) => {
 
   // Skip chrome-extension and other non-http(s) requests
   if (!url.protocol.startsWith('http')) {
+    return;
+  }
+
+  // IMPORTANT: Skip Next.js internal routes (_next/) in development
+  // This prevents SW from interfering with hot-reloading and lazy-loaded components
+  if (IS_DEV && url.pathname.startsWith('/_next/')) {
+    // In development, let browser handle Next.js chunks directly (no caching)
+    return;
+  }
+
+  // In production, handle _next/ static assets with cache-first strategy
+  if (!IS_DEV && url.pathname.startsWith('/_next/static/')) {
+    event.respondWith(handleStaticAssets(request));
+    return;
+  }
+
+  // Skip _next/webpack-hmr (hot module replacement) in development
+  if (url.pathname.includes('webpack-hmr')) {
     return;
   }
 
@@ -176,7 +197,7 @@ async function handleStaticAssets(request) {
 // Stale-while-revalidate strategy for pages
 async function handlePageRequest(request) {
   const cachedResponse = await caches.match(request);
-  
+
   // Always try to fetch from network
   const networkResponsePromise = fetch(request).then(async (response) => {
     // Update cache with new response
@@ -186,12 +207,18 @@ async function handlePageRequest(request) {
         // Clone the response before using it
         await cache.put(request, response.clone());
       } catch (error) {
-        console.log('[SW] Failed to cache page response:', error);
+        // Silently fail cache updates in development
+        if (!IS_DEV) {
+          console.log('[SW] Failed to cache page response:', error);
+        }
       }
     }
     return response;
   }).catch(error => {
-    console.log('[SW] Network fetch failed:', error);
+    // Only log in production to reduce noise
+    if (!IS_DEV) {
+      console.log('[SW] Network fetch failed:', error);
+    }
     throw error;
   });
   
@@ -208,14 +235,17 @@ async function handlePageRequest(request) {
     // Wait for network response if no cache
     return await networkResponsePromise;
   } catch (error) {
-    console.log('[SW] Network failed for page request:', request.url);
-    
+    // Only log meaningful errors in production
+    if (!IS_DEV && error instanceof TypeError && !error.message.includes('Failed to fetch')) {
+      console.log('[SW] Network failed for page request:', request.url);
+    }
+
     // Return offline page
     const offlineResponse = await caches.match('/offline');
     if (offlineResponse) {
       return offlineResponse;
     }
-    
+
     // Fallback offline response
     return new Response(
       `<!DOCTYPE html>

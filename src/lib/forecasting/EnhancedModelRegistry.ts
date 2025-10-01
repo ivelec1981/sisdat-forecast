@@ -87,7 +87,7 @@ export class EnhancedModelRegistry {
   private static instance: EnhancedModelRegistry;
   private modelPerformance: Map<string, ModelPerformance> = new Map();
   private modelCapabilities: Map<ForecastModel, ModelCapabilities> = new Map();
-  private sectorPreferences: SectorModelPreferences;
+  private sectorPreferences: SectorModelPreferences = {} as SectorModelPreferences;
 
   private constructor() {
     this.initializeModelCapabilities();
