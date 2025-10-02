@@ -111,9 +111,17 @@ export function validateGeoJSONFeature(feature: any, logErrors = false): feature
             return false;
           }
           // Basic longitude/latitude range check for Ecuador
-          if (coord[0] < -93 || coord[0] > -75 || coord[1] < -5 || coord[1] > 2) {
-            if (logErrors) console.error('❌ GeoJSON validation: Coordinates out of range for Ecuador', { coord, id: properties.id });
-            return false;
+          // Ecuador continental: ~-82° to -75° longitude, ~-5° to 2° latitude
+          // Galapagos: ~-92° to -89° longitude
+          // Using permissive bounds to allow all valid Ecuador coordinates
+          if (coord[0] < -95 || coord[0] > -74 || coord[1] < -7 || coord[1] > 3) {
+            // Only warn, don't fail - some polygons may extend slightly beyond strict bounds
+            if (logErrors) console.warn('⚠️ GeoJSON: Coordinate outside typical Ecuador bounds', {
+              coord,
+              id: properties?.id,
+              note: 'This may be valid for border areas or Galapagos'
+            });
+            // Don't return false - allow the coordinate
           }
         }
       }

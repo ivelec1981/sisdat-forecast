@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Zap, Power, Activity, AlertTriangle, Settings, ZoomIn, ZoomOut, Maximize2, Grid3x3 } from 'lucide-react';
+import { Zap, Power, Activity, AlertTriangle, Settings, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 
 // ==================== TIPOS ====================
 interface NodeData {
@@ -436,7 +436,7 @@ export default function InteractiveDiagram() {
           className={`p-2.5 rounded-lg transition-colors ${showGrid ? 'bg-blue-100' : 'hover:bg-slate-100'}`}
           title="Mostrar/Ocultar grid"
         >
-          <Grid3x3 size={20} className={showGrid ? 'text-blue-600' : 'text-slate-700'} />
+          <Settings size={20} className={showGrid ? 'text-blue-600' : 'text-slate-700'} />
         </button>
       </div>
 

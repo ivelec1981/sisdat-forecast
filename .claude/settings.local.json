@@ -14,7 +14,9 @@
       "Bash(npm install:*)",
       "Bash(node:*)",
       "Bash(lsof:*)",
-      "Bash(xargs kill:*)"
+      "Bash(xargs kill:*)",
+      "Bash(git checkout:*)",
+      "Bash(npm run clean:*)"
     ],
     "additionalDirectories": [
       "/mnt/c/Users/LEGION/Maestria BigData/Trabajo Titulacion/ev_simulation"

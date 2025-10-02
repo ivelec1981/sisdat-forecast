@@ -1,378 +1,502 @@
 'use client'
 
-import React, { useState, useMemo } from 'react';
-import { Zap, Power, Activity, TrendingUp, Info } from 'lucide-react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { Zap, Power, Activity, AlertTriangle, Settings, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 
-interface BusNode {
-  id: string;
-  name: string;
-  voltage: number;
-  x: number;
-  y: number;
-  type: 'generation' | 'transmission' | 'distribution' | 'load';
-  capacity?: number;
-  load?: number;
-  region: string;
+// ==================== TIPOS ====================
+interface NodeData {
+  label: string;
+  [key: string]: string | number | boolean;
 }
 
-interface Line {
+interface Node {
+  id: string;
+  type: 'generator' | 'transformer' | 'bus' | 'breaker' | 'load';
+  x: number;
+  y: number;
+  data: NodeData;
+}
+
+interface Edge {
   id: string;
   from: string;
   to: string;
-  voltage: number;
-  capacity: number;
-  flow?: number;
-  status: 'active' | 'overload' | 'maintenance';
+  animated?: boolean;
 }
 
-interface Generator {
+interface ViewBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface DragState {
   id: string;
-  busId: string;
-  name: string;
-  type: 'hydro' | 'thermal' | 'solar' | 'wind';
-  capacity: number;
-  generation: number;
+  offsetX: number;
+  offsetY: number;
 }
 
+// ==================== DATOS INICIALES ====================
+const initialNodes: Node[] = [
+  {
+    id: 'gen1',
+    type: 'generator',
+    x: 200,
+    y: 300,
+    data: { label: 'Generador G1', power: 100, voltage: 13.8, frequency: 60, status: 'online' }
+  },
+  {
+    id: 'bus1',
+    type: 'bus',
+    x: 450,
+    y: 300,
+    data: { label: 'Barra 1', voltage: 13.8, current: 4184 }
+  },
+  {
+    id: 't1',
+    type: 'transformer',
+    x: 700,
+    y: 300,
+    data: { label: 'T1', primaryVoltage: 13.8, secondaryVoltage: 230, power: 100, impedance: 8, tap: 0 }
+  },
+  {
+    id: 'brk1',
+    type: 'breaker',
+    x: 980,
+    y: 300,
+    data: { label: '52-1', isOpen: false, ratedCurrent: 1200 }
+  },
+  {
+    id: 'bus2',
+    type: 'bus',
+    x: 1200,
+    y: 300,
+    data: { label: 'Barra 2', voltage: 230, current: 252 }
+  },
+  {
+    id: 'brk2',
+    type: 'breaker',
+    x: 1200,
+    y: 520,
+    data: { label: '52-2', isOpen: false, ratedCurrent: 400 }
+  },
+  {
+    id: 't2',
+    type: 'transformer',
+    x: 1200,
+    y: 740,
+    data: { label: 'T2', primaryVoltage: 230, secondaryVoltage: 13.8, power: 50, impedance: 10, tap: 0 }
+  },
+  {
+    id: 'load1',
+    type: 'load',
+    x: 1200,
+    y: 980,
+    data: { label: 'Carga Industrial', power: 40, voltage: 13.8, powerFactor: 0.85 }
+  }
+];
+
+const initialEdges: Edge[] = [
+  { id: 'e1', from: 'gen1', to: 'bus1', animated: true },
+  { id: 'e2', from: 'bus1', to: 't1', animated: true },
+  { id: 'e3', from: 't1', to: 'brk1', animated: true },
+  { id: 'e4', from: 'brk1', to: 'bus2', animated: true },
+  { id: 'e5', from: 'bus2', to: 'brk2', animated: true },
+  { id: 'e6', from: 'brk2', to: 't2', animated: true },
+  { id: 'e7', from: 't2', to: 'load1', animated: true }
+];
+
+// ==================== COMPONENTES DE SÍMBOLOS ====================
+interface SymbolProps {
+  data: NodeData;
+  selected: boolean;
+  onClick: () => void;
+}
+
+interface BreakerSymbolProps extends SymbolProps {
+  onToggle: () => void;
+}
+
+const GeneratorSymbol: React.FC<SymbolProps> = ({ data, selected, onClick }) => (
+  <g onClick={onClick} style={{ cursor: 'pointer' }}>
+    <rect x="-70" y="-70" width="140" height="140" fill="white" stroke={selected ? '#3b82f6' : '#cbd5e1'} strokeWidth={selected ? 4 : 2} rx="10" />
+    <circle cx="0" cy="-15" r="35" stroke="#3b82f6" strokeWidth="4" fill="none" />
+    <text x="0" y="0" textAnchor="middle" fontSize="38" fontWeight="bold" fill="#3b82f6">G</text>
+    <text x="0" y="40" textAnchor="middle" fontSize="14" fontWeight="bold" fill="#1e293b">{data.label}</text>
+    <text x="0" y="58" textAnchor="middle" fontSize="12" fill="#64748b">{data.voltage} kV</text>
+  </g>
+);
+
+const TransformerSymbol: React.FC<SymbolProps> = ({ data, selected, onClick }) => (
+  <g onClick={onClick} style={{ cursor: 'pointer' }}>
+    <rect x="-85" y="-60" width="170" height="120" fill="white" stroke={selected ? '#10b981' : '#cbd5e1'} strokeWidth={selected ? 4 : 2} rx="10" />
+    <circle cx="-30" cy="-5" r="25" stroke="#10b981" strokeWidth="4" fill="none" />
+    <circle cx="30" cy="-5" r="25" stroke="#10b981" strokeWidth="4" fill="none" />
+    <text x="0" y="35" textAnchor="middle" fontSize="18" fontWeight="bold" fill="#10b981">{data.label}</text>
+    <text x="0" y="52" textAnchor="middle" fontSize="12" fill="#64748b">{data.primaryVoltage}/{data.secondaryVoltage} kV</text>
+  </g>
+);
+
+const BusSymbol: React.FC<SymbolProps> = ({ data, selected, onClick }) => (
+  <g onClick={onClick} style={{ cursor: 'pointer' }}>
+    <rect x="-70" y="-50" width="140" height="100" fill="white" stroke={selected ? '#8b5cf6' : '#cbd5e1'} strokeWidth={selected ? 4 : 2} rx="10" />
+    <rect x="-50" y="-18" width="100" height="25" fill="#8b5cf6" stroke="#6d28d9" strokeWidth="2" />
+    <text x="0" y="0" textAnchor="middle" fontSize="14" fontWeight="bold" fill="white">BUS</text>
+    <text x="0" y="35" textAnchor="middle" fontSize="14" fontWeight="bold" fill="#1e293b">{data.label}</text>
+  </g>
+);
+
+const BreakerSymbol: React.FC<BreakerSymbolProps> = ({ data, selected, onClick, onToggle }) => (
+  <g onClick={onClick} style={{ cursor: 'pointer' }}>
+    <rect x="-70" y="-80" width="140" height="160" fill="white" stroke={selected ? '#f59e0b' : '#cbd5e1'} strokeWidth={selected ? 4 : 2} rx="10" />
+    <line x1="-35" y1="0" x2="-12" y2="0" stroke="#f59e0b" strokeWidth="4" />
+    <line x1="-12" y1="0" x2="12" y2={data.isOpen ? -25 : 0} stroke="#f59e0b" strokeWidth="4" style={{ transition: 'all 0.3s' }} />
+    <line x1="12" y1="0" x2="35" y2="0" stroke="#f59e0b" strokeWidth="4" />
+    <circle cx="-12" cy="0" r="5" fill="#f59e0b" />
+    <circle cx="12" cy="0" r="5" fill="#f59e0b" />
+    <foreignObject x="-60" y="20" width="120" height="45">
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle();
+        }}
+        style={{
+          width: '100%',
+          padding: '8px',
+          background: data.isOpen ? '#ef4444' : '#10b981',
+          color: 'white',
+          border: 'none',
+          borderRadius: '6px',
+          cursor: 'pointer',
+          fontSize: '12px',
+          fontWeight: 'bold'
+        }}
+      >
+        {data.isOpen ? 'ABRIR' : 'CERRAR'}
+      </button>
+    </foreignObject>
+    <text x="0" y="73" textAnchor="middle" fontSize="12" fill="#64748b">{data.label}</text>
+  </g>
+);
+
+const LoadSymbol: React.FC<SymbolProps> = ({ data, selected, onClick }) => (
+  <g onClick={onClick} style={{ cursor: 'pointer' }}>
+    <rect x="-70" y="-60" width="140" height="120" fill="white" stroke={selected ? '#ef4444' : '#cbd5e1'} strokeWidth={selected ? 4 : 2} rx="10" />
+    <path d="M -35,-15 L -23,12 L -12,-25 L 0,12 L 12,-25 L 23,12 L 35,-15" fill="none" stroke="#ef4444" strokeWidth="4" strokeLinecap="round" />
+    <line x1="-40" y1="23" x2="40" y2="23" stroke="#ef4444" strokeWidth="2" />
+    <line x1="-35" y1="28" x2="35" y2="28" stroke="#ef4444" strokeWidth="2" />
+    <line x1="-30" y1="33" x2="30" y2="33" stroke="#ef4444" strokeWidth="2" />
+    <text x="0" y="52" textAnchor="middle" fontSize="14" fontWeight="bold" fill="#1e293b">{data.label}</text>
+  </g>
+);
+
+// ==================== COMPONENTE PRINCIPAL ====================
 export default function ElectricalDiagram() {
-  const [selectedBus, setSelectedBus] = useState<string | null>(null);
-  const [selectedLine, setSelectedLine] = useState<string | null>(null);
-  const [showFlow, setShowFlow] = useState(true);
-  const [showLabels, setShowLabels] = useState(true);
-  const [viewMode, setViewMode] = useState<'simplified' | 'detailed'>('simplified');
+  const [nodes, setNodes] = useState<Node[]>(initialNodes);
+  const [edges] = useState<Edge[]>(initialEdges);
+  const [selectedNode, setSelectedNode] = useState<string | null>(null);
+  const [dragging, setDragging] = useState<DragState | null>(null);
+  const [viewBox, setViewBox] = useState<ViewBox>({ x: 0, y: 100, width: 1600, height: 1000 });
+  const [zoom, setZoom] = useState<number>(1);
+  const [isPanning, setIsPanning] = useState<boolean>(false);
+  const [panStart, setPanStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [dragFromPalette, setDragFromPalette] = useState<Node['type'] | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
 
-  const buses: BusNode[] = useMemo(() => [
-    { id: 'B_COCA', name: 'Coca', voltage: 230, x: 200, y: 100, type: 'generation', capacity: 1500, load: 1200, region: 'Norte' },
-    { id: 'B_QUITO', name: 'Quito', voltage: 230, x: 300, y: 200, type: 'transmission', capacity: 2000, load: 1800, region: 'Pichincha' },
-    { id: 'B_IBARRA', name: 'Ibarra', voltage: 138, x: 250, y: 120, type: 'distribution', capacity: 500, load: 450, region: 'Norte' },
-    { id: 'B_AMBATO', name: 'Ambato', voltage: 138, x: 350, y: 280, type: 'distribution', capacity: 600, load: 520, region: 'Centro' },
-    { id: 'B_RIOBAMBA', name: 'Riobamba', voltage: 138, x: 400, y: 320, type: 'distribution', capacity: 450, load: 380, region: 'Centro' },
-    { id: 'B_GUAYAQUIL', name: 'Guayaquil', voltage: 230, x: 450, y: 450, type: 'transmission', capacity: 2500, load: 2200, region: 'Guayas' },
-    { id: 'B_MANTA', name: 'Manta', voltage: 138, x: 350, y: 400, type: 'distribution', capacity: 700, load: 620, region: 'Manabí' },
-    { id: 'B_MACHALA', name: 'Machala', voltage: 138, x: 500, y: 520, type: 'distribution', capacity: 550, load: 480, region: 'El Oro' },
-    { id: 'B_CUENCA', name: 'Cuenca', voltage: 230, x: 450, y: 380, type: 'transmission', capacity: 1800, load: 1500, region: 'Sur' },
-    { id: 'B_PAUTE', name: 'Paute', voltage: 230, x: 520, y: 370, type: 'generation', capacity: 1075, load: 900, region: 'Sur' },
-    { id: 'B_LOJA', name: 'Loja', voltage: 138, x: 480, y: 480, type: 'distribution', capacity: 400, load: 350, region: 'Sur' },
-    { id: 'B_AGOYÁN', name: 'Agoyán', voltage: 230, x: 380, y: 290, type: 'generation', capacity: 156, load: 130, region: 'Centro' },
-    { id: 'B_MOLINO', name: 'Molino', voltage: 230, x: 440, y: 340, type: 'generation', capacity: 1100, load: 950, region: 'Sur' },
-  ], []);
-
-  const lines: Line[] = useMemo(() => [
-    { id: 'L1', from: 'B_COCA', to: 'B_QUITO', voltage: 230, capacity: 1500, flow: 1200, status: 'active' },
-    { id: 'L2', from: 'B_QUITO', to: 'B_IBARRA', voltage: 138, capacity: 500, flow: 450, status: 'active' },
-    { id: 'L3', from: 'B_QUITO', to: 'B_AMBATO', voltage: 138, capacity: 800, flow: 650, status: 'active' },
-    { id: 'L4', from: 'B_AMBATO', to: 'B_AGOYÁN', voltage: 230, capacity: 300, flow: 250, status: 'active' },
-    { id: 'L5', from: 'B_AMBATO', to: 'B_RIOBAMBA', voltage: 138, capacity: 600, flow: 520, status: 'active' },
-    { id: 'L6', from: 'B_RIOBAMBA', to: 'B_CUENCA', voltage: 230, capacity: 1200, flow: 1050, status: 'active' },
-    { id: 'L7', from: 'B_CUENCA', to: 'B_PAUTE', voltage: 230, capacity: 1200, flow: 900, status: 'active' },
-    { id: 'L8', from: 'B_CUENCA', to: 'B_MOLINO', voltage: 230, capacity: 1200, flow: 950, status: 'active' },
-    { id: 'L9', from: 'B_CUENCA', to: 'B_LOJA', voltage: 138, capacity: 450, flow: 350, status: 'active' },
-    { id: 'L10', from: 'B_QUITO', to: 'B_MANTA', voltage: 138, capacity: 800, flow: 620, status: 'active' },
-    { id: 'L11', from: 'B_MANTA', to: 'B_GUAYAQUIL', voltage: 230, capacity: 1500, flow: 1300, status: 'active' },
-    { id: 'L12', from: 'B_CUENCA', to: 'B_GUAYAQUIL', voltage: 230, capacity: 1800, flow: 1600, status: 'active' },
-    { id: 'L13', from: 'B_GUAYAQUIL', to: 'B_MACHALA', voltage: 138, capacity: 600, flow: 480, status: 'active' },
-  ], []);
-
-  const generators: Generator[] = useMemo(() => [
-    { id: 'G1', busId: 'B_PAUTE', name: 'Paute', type: 'hydro', capacity: 1075, generation: 950 },
-    { id: 'G2', busId: 'B_MOLINO', name: 'Molino', type: 'hydro', capacity: 1100, generation: 900 },
-    { id: 'G3', busId: 'B_AGOYÁN', name: 'Agoyán', type: 'hydro', capacity: 156, generation: 130 },
-    { id: 'G4', busId: 'B_COCA', name: 'Coca Codo Sinclair', type: 'hydro', capacity: 1500, generation: 1200 },
-    { id: 'G5', busId: 'B_GUAYAQUIL', name: 'Trinitaria', type: 'thermal', capacity: 130, generation: 110 },
-  ], []);
-
-  const getLinePath = (line: Line) => {
-    const fromBus = buses.find(b => b.id === line.from);
-    const toBus = buses.find(b => b.id === line.to);
-    if (!fromBus || !toBus) return '';
-    const midX = (fromBus.x + toBus.x) / 2;
-    const midY = (fromBus.y + toBus.y) / 2;
-    const offset = 20;
-    return `M ${fromBus.x} ${fromBus.y} Q ${midX + offset} ${midY - offset} ${toBus.x} ${toBus.y}`;
+  const handleNodeClick = (nodeId: string) => {
+    setSelectedNode(nodeId === selectedNode ? null : nodeId);
   };
 
-  const getLineColor = (line: Line) => {
-    if (!line.flow) return '#94A3B8';
-    const loadPercent = (line.flow / line.capacity) * 100;
-    if (line.status === 'maintenance') return '#F59E0B';
-    if (line.status === 'overload' || loadPercent > 90) return '#EF4444';
-    if (loadPercent > 75) return '#F97316';
-    return '#10B981';
+  const handleToggleBreaker = (nodeId: string) => {
+    setNodes(nodes.map(n =>
+      n.id === nodeId && n.type === 'breaker'
+        ? { ...n, data: { ...n.data, isOpen: !n.data.isOpen } }
+        : n
+    ));
   };
 
-  const getLineWidth = (voltage: number) => {
-    if (voltage >= 230) return 4;
-    if (voltage >= 138) return 3;
-    return 2;
-  };
-
-  const getBusColor = (bus: BusNode) => {
-    if (selectedBus === bus.id) return '#3B82F6';
-    switch (bus.type) {
-      case 'generation': return '#10B981';
-      case 'transmission': return '#8B5CF6';
-      case 'distribution': return '#F59E0B';
-      case 'load': return '#EF4444';
-      default: return '#6B7280';
+  const handleMouseDown = (e: React.MouseEvent, nodeId: string) => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    const node = nodes.find(n => n.id === nodeId);
+    if (node) {
+      setDragging({
+        id: nodeId,
+        offsetX: e.clientX - node.x * zoom,
+        offsetY: e.clientY - node.y * zoom
+      });
     }
   };
 
-  const systemMetrics = useMemo(() => {
-    const totalGeneration = generators.reduce((sum, g) => sum + g.generation, 0);
-    const totalCapacity = generators.reduce((sum, g) => sum + g.capacity, 0);
-    const totalLoad = buses.reduce((sum, b) => sum + (b.load || 0), 0);
-    const utilizationPercent = (totalGeneration / totalCapacity) * 100;
-    return {
-      totalGeneration,
-      totalCapacity,
-      totalLoad,
-      utilizationPercent,
-      linesActive: lines.filter(l => l.status === 'active').length,
-      linesTotal: lines.length,
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (dragging) {
+      const newX = (e.clientX - dragging.offsetX) / zoom;
+      const newY = (e.clientY - dragging.offsetY) / zoom;
+      setNodes(nodes => nodes.map(n =>
+        n.id === dragging.id ? { ...n, x: newX, y: newY } : n
+      ));
+    } else if (isPanning) {
+      const dx = e.clientX - panStart.x;
+      const dy = e.clientY - panStart.y;
+      setViewBox(vb => ({
+        ...vb,
+        x: vb.x - dx / zoom,
+        y: vb.y - dy / zoom
+      }));
+      setPanStart({ x: e.clientX, y: e.clientY });
+    }
+  }, [dragging, isPanning, panStart, zoom]);
+
+  const handleMouseUp = useCallback(() => {
+    setDragging(null);
+    setIsPanning(false);
+  }, []);
+
+  const handlePanStart = (e: React.MouseEvent) => {
+    if (e.button === 0 && !dragging) {
+      setIsPanning(true);
+      setPanStart({ x: e.clientX, y: e.clientY });
+    }
+  };
+
+  const handleZoomIn = () => setZoom(z => Math.min(z * 1.2, 4));
+  const handleZoomOut = () => setZoom(z => Math.max(z / 1.2, 0.2));
+  const handleFitView = () => {
+    setZoom(1);
+    setViewBox({ x: 0, y: 100, width: 1600, height: 1000 });
+  };
+
+  const handleDragStartPalette = (e: React.DragEvent, type: Node['type']) => {
+    setDragFromPalette(type);
+  };
+
+  const handleDragOverCanvas = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDropOnCanvas = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!dragFromPalette || !svgRef.current) return;
+
+    const rect = svgRef.current.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / zoom + viewBox.x;
+    const y = (e.clientY - rect.top) / zoom + viewBox.y;
+
+    const defaultData: Record<Node['type'], NodeData> = {
+      generator: { label: 'Gen', power: 50, voltage: 13.8, frequency: 60, status: 'online' },
+      transformer: { label: 'T', primaryVoltage: 13.8, secondaryVoltage: 230, power: 50, impedance: 8, tap: 0 },
+      bus: { label: 'Bus', voltage: 13.8, current: 0 },
+      breaker: { label: '52', isOpen: false, ratedCurrent: 1200 },
+      load: { label: 'Load', power: 20, voltage: 13.8, powerFactor: 0.85 }
     };
-  }, [generators, buses, lines]);
+
+    const newNode: Node = {
+      id: `${dragFromPalette}-${Date.now()}`,
+      type: dragFromPalette,
+      x,
+      y,
+      data: defaultData[dragFromPalette]
+    };
+
+    setNodes([...nodes, newNode]);
+    setDragFromPalette(null);
+  };
+
+  useEffect(() => {
+    if (dragging || isPanning) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [dragging, isPanning, handleMouseMove, handleMouseUp]);
+
+  const getNodePosition = (nodeId: string) => {
+    const node = nodes.find(n => n.id === nodeId);
+    return node ? { x: node.x, y: node.y } : { x: 0, y: 0 };
+  };
+
+  const selectedNodeData = nodes.find(n => n.id === selectedNode);
+
+  const components = [
+    { type: 'generator' as const, icon: Zap, label: 'Generador', color: '#3b82f6' },
+    { type: 'transformer' as const, icon: Activity, label: 'Transformador', color: '#10b981' },
+    { type: 'bus' as const, icon: Power, label: 'Barra', color: '#8b5cf6' },
+    { type: 'breaker' as const, icon: AlertTriangle, label: 'Interruptor', color: '#f59e0b' },
+    { type: 'load' as const, icon: Settings, label: 'Carga', color: '#ef4444' }
+  ];
 
   return (
-    <div className="space-y-6">
-      {/* Métricas del Sistema */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-xl border border-green-200">
-          <div className="flex items-center gap-2 mb-2">
-            <Zap className="text-green-600" size={20} />
-            <span className="text-sm font-medium text-green-700">Generación Total</span>
-          </div>
-          <div className="text-2xl font-bold text-green-900">{systemMetrics.totalGeneration.toFixed(0)} MW</div>
-          <div className="text-xs text-green-600 mt-1">de {systemMetrics.totalCapacity.toFixed(0)} MW disponibles</div>
-        </div>
-
-        <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-4 rounded-xl border border-blue-200">
-          <div className="flex items-center gap-2 mb-2">
-            <Activity className="text-blue-600" size={20} />
-            <span className="text-sm font-medium text-blue-700">Demanda Total</span>
-          </div>
-          <div className="text-2xl font-bold text-blue-900">{systemMetrics.totalLoad.toFixed(0)} MW</div>
-          <div className="text-xs text-blue-600 mt-1">{((systemMetrics.totalLoad / systemMetrics.totalGeneration) * 100).toFixed(1)}% de generación</div>
-        </div>
-
-        <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-4 rounded-xl border border-purple-200">
-          <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className="text-purple-600" size={20} />
-            <span className="text-sm font-medium text-purple-700">Utilización</span>
-          </div>
-          <div className="text-2xl font-bold text-purple-900">{systemMetrics.utilizationPercent.toFixed(1)}%</div>
-          <div className="text-xs text-purple-600 mt-1">Capacidad en uso</div>
-        </div>
-
-        <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-4 rounded-xl border border-amber-200">
-          <div className="flex items-center gap-2 mb-2">
-            <Power className="text-amber-600" size={20} />
-            <span className="text-sm font-medium text-amber-700">Líneas Activas</span>
-          </div>
-          <div className="text-2xl font-bold text-amber-900">{systemMetrics.linesActive}/{systemMetrics.linesTotal}</div>
-          <div className="text-xs text-amber-600 mt-1">Transmisión operativa</div>
-        </div>
+    <div className="relative w-full bg-slate-100 overflow-hidden" style={{ height: '800px' }}>
+      {/* Header */}
+      <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-20 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-8 py-5 rounded-xl shadow-xl flex items-center gap-4">
+        <Zap size={28} />
+        <span className="font-bold text-xl">Diagrama Unifilar - Sistema Eléctrico de Potencia</span>
       </div>
 
-      {/* Controles */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-        <div className="flex flex-wrap gap-4 items-center justify-between">
-          <div className="flex gap-2">
-            <button onClick={() => setShowFlow(!showFlow)} className={`px-3 py-2 rounded-lg text-sm font-medium transition ${showFlow ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
-              Flujo de Potencia
-            </button>
-            <button onClick={() => setShowLabels(!showLabels)} className={`px-3 py-2 rounded-lg text-sm font-medium transition ${showLabels ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
-              Etiquetas
-            </button>
+      {/* Paleta de Componentes */}
+      <div className="absolute left-5 top-24 z-20 bg-white p-5 rounded-xl shadow-lg w-52 border-2 border-slate-200">
+        <div className="font-bold mb-4 text-base text-slate-800">Componentes</div>
+        {components.map(({ type, icon: Icon, label, color }) => (
+          <div
+            key={type}
+            draggable
+            onDragStart={(e) => handleDragStartPalette(e, type)}
+            className="p-3 mb-3 bg-white border-2 rounded-lg cursor-grab flex items-center gap-3 text-sm hover:scale-105 transition-transform"
+            style={{ borderColor: color }}
+          >
+            <Icon size={22} color={color} />
+            <span className="text-slate-700 font-medium">{label}</span>
           </div>
-          <div className="flex gap-2">
-            <button onClick={() => setViewMode('simplified')} className={`px-3 py-2 rounded-lg text-sm font-medium transition ${viewMode === 'simplified' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
-              Simplificado
-            </button>
-            <button onClick={() => setViewMode('detailed')} className={`px-3 py-2 rounded-lg text-sm font-medium transition ${viewMode === 'detailed' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
-              Detallado
-            </button>
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* Diagrama SVG */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-slate-900">Sistema Nacional Interconectado</h3>
-          <div className="flex items-center gap-2 text-sm text-slate-600">
-            <Info size={16} />
-            <span>Click en nodos o líneas para detalles</span>
-          </div>
-        </div>
-
-        <div className="bg-slate-50 rounded-lg p-4 overflow-x-auto">
-          <svg viewBox="0 0 700 600" className="w-full h-auto" style={{ minHeight: '600px', maxHeight: '800px' }}>
-            <defs>
-              <linearGradient id="powerFlow" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#10B981" stopOpacity="0.8" />
-                <stop offset="50%" stopColor="#3B82F6" stopOpacity="0.8" />
-                <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0.8" />
-              </linearGradient>
-              <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-                <polygon points="0 0, 10 3, 0 6" fill="#10B981" />
-              </marker>
-            </defs>
-
-            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#E2E8F0" strokeWidth="0.5" />
-            </pattern>
-            <rect width="700" height="600" fill="url(#grid)" />
-
-            {/* Líneas */}
-            <g className="transmission-lines">
-              {lines.map((line) => {
-                const isSelected = selectedLine === line.id;
-                const path = getLinePath(line);
+      {/* Panel de Inspección */}
+      <div className="absolute right-5 top-24 z-20 bg-white p-5 rounded-xl shadow-lg w-80 border-2 border-slate-200 max-h-96 overflow-y-auto">
+        {selectedNodeData ? (
+          <>
+            <div className="font-bold text-base mb-1 text-slate-800">{selectedNodeData.data.label}</div>
+            <div className="text-xs font-semibold mb-4 pb-3 border-b-2 border-slate-100" style={{ color: components.find(c => c.type === selectedNodeData.type)?.color }}>
+              {components.find(c => c.type === selectedNodeData.type)?.label}
+            </div>
+            <div className="text-sm space-y-2">
+              {Object.entries(selectedNodeData.data).map(([key, value]) => {
+                if (key === 'label') return null;
                 return (
-                  <g key={line.id}>
-                    <path d={path} fill="none" stroke={getLineColor(line)} strokeWidth={isSelected ? getLineWidth(line.voltage) + 2 : getLineWidth(line.voltage)} strokeLinecap="round" className="cursor-pointer transition-all duration-200 hover:stroke-blue-500" onClick={() => setSelectedLine(isSelected ? null : line.id)} opacity={isSelected ? 1 : 0.7} />
-                    {showFlow && line.flow && <path d={path} fill="none" stroke={getLineColor(line)} strokeWidth="2" markerEnd="url(#arrowhead)" opacity="0.6" className="pointer-events-none" />}
-                    {showFlow && showLabels && line.flow && (
-                      <text x={(buses.find(b => b.id === line.from)!.x + buses.find(b => b.id === line.to)!.x) / 2} y={(buses.find(b => b.id === line.from)!.y + buses.find(b => b.id === line.to)!.y) / 2 - 10} textAnchor="middle" className="text-xs font-medium fill-slate-700 pointer-events-none" style={{ fontSize: '10px' }}>
-                        {line.flow.toFixed(0)} MW
-                      </text>
-                    )}
-                  </g>
+                  <div key={key} className="flex justify-between py-1 border-b border-slate-100">
+                    <span className="text-slate-600 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
+                    <span className="font-semibold text-slate-800">{typeof value === 'boolean' ? (value ? 'Sí' : 'No') : value}</span>
+                  </div>
                 );
               })}
-            </g>
-
-            {/* Nodos */}
-            <g className="bus-nodes">
-              {buses.map((bus) => {
-                const isSelected = selectedBus === bus.id;
-                const hasGenerator = generators.some(g => g.busId === bus.id);
-                return (
-                  <g key={bus.id}>
-                    {hasGenerator && <circle cx={bus.x} cy={bus.y} r="20" fill="#10B981" fillOpacity="0.2" stroke="#10B981" strokeWidth="2" strokeDasharray="4,4" className="pointer-events-none" />}
-                    <circle cx={bus.x} cy={bus.y} r={isSelected ? 12 : 10} fill={getBusColor(bus)} stroke="white" strokeWidth="3" className="cursor-pointer transition-all duration-200 hover:r-12" onClick={() => setSelectedBus(isSelected ? null : bus.id)} style={{ filter: isSelected ? 'drop-shadow(0 0 8px rgba(59, 130, 246, 0.6))' : 'none' }} />
-                    {showLabels && (
-                      <g>
-                        <text x={bus.x} y={bus.y - 20} textAnchor="middle" className="font-semibold fill-slate-900 pointer-events-none" style={{ fontSize: '12px' }}>{bus.name}</text>
-                        <text x={bus.x} y={bus.y + 30} textAnchor="middle" className="text-xs fill-slate-600 pointer-events-none" style={{ fontSize: '10px' }}>{bus.voltage} kV</text>
-                      </g>
-                    )}
-                    {viewMode === 'detailed' && bus.load && bus.capacity && (
-                      <g>
-                        <rect x={bus.x - 15} y={bus.y + 15} width="30" height="4" fill="#E2E8F0" rx="2" />
-                        <rect x={bus.x - 15} y={bus.y + 15} width={(bus.load / bus.capacity) * 30} height="4" fill={bus.load / bus.capacity > 0.9 ? '#EF4444' : '#10B981'} rx="2" />
-                      </g>
-                    )}
-                  </g>
-                );
-              })}
-            </g>
-
-            <g className="region-labels" opacity="0.3">
-              <text x="200" y="80" className="text-lg font-bold fill-green-600" style={{ fontSize: '16px' }}>NORTE</text>
-              <text x="350" y="260" className="text-lg font-bold fill-purple-600" style={{ fontSize: '16px' }}>CENTRO</text>
-              <text x="350" y="430" className="text-lg font-bold fill-blue-600" style={{ fontSize: '16px' }}>COSTA</text>
-              <text x="480" y="360" className="text-lg font-bold fill-orange-600" style={{ fontSize: '16px' }}>SUR</text>
-            </g>
-          </svg>
-        </div>
-
-        {/* Panel de información */}
-        {(selectedBus || selectedLine) && (
-          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            {selectedBus && (() => {
-              const bus = buses.find(b => b.id === selectedBus)!;
-              const generator = generators.find(g => g.busId === selectedBus);
-              return (
-                <div>
-                  <h4 className="font-bold text-blue-900 mb-3 flex items-center gap-2">
-                    <Power size={20} />
-                    Subestación {bus.name}
-                  </h4>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                    <div><span className="text-blue-700 font-medium">Voltaje:</span><p className="text-blue-900 font-bold">{bus.voltage} kV</p></div>
-                    <div><span className="text-blue-700 font-medium">Tipo:</span><p className="text-blue-900 font-bold capitalize">{bus.type}</p></div>
-                    <div><span className="text-blue-700 font-medium">Región:</span><p className="text-blue-900 font-bold">{bus.region}</p></div>
-                    {bus.capacity && <div><span className="text-blue-700 font-medium">Capacidad:</span><p className="text-blue-900 font-bold">{bus.capacity} MW</p></div>}
-                    {bus.load && <div><span className="text-blue-700 font-medium">Carga Actual:</span><p className="text-blue-900 font-bold">{bus.load} MW</p></div>}
-                    {bus.load && bus.capacity && <div><span className="text-blue-700 font-medium">Utilización:</span><p className="text-blue-900 font-bold">{((bus.load / bus.capacity) * 100).toFixed(1)}%</p></div>}
-                  </div>
-                  {generator && (
-                    <div className="mt-3 pt-3 border-t border-blue-200">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Zap size={16} className="text-green-600" />
-                        <span className="font-semibold text-blue-900">Generación {generator.name}</span>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4 text-sm">
-                        <div><span className="text-blue-700 font-medium">Tipo:</span><p className="text-blue-900 font-bold capitalize">{generator.type === 'hydro' ? 'Hidráulica' : generator.type}</p></div>
-                        <div><span className="text-blue-700 font-medium">Capacidad:</span><p className="text-blue-900 font-bold">{generator.capacity} MW</p></div>
-                        <div><span className="text-blue-700 font-medium">Generación:</span><p className="text-blue-900 font-bold">{generator.generation} MW</p></div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-            {selectedLine && (() => {
-              const line = lines.find(l => l.id === selectedLine)!;
-              const fromBus = buses.find(b => b.id === line.from)!;
-              const toBus = buses.find(b => b.id === line.to)!;
-              const loadPercent = line.flow ? (line.flow / line.capacity) * 100 : 0;
-              return (
-                <div>
-                  <h4 className="font-bold text-blue-900 mb-3 flex items-center gap-2">
-                    <Activity size={20} />
-                    Línea {fromBus.name} → {toBus.name}
-                  </h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div><span className="text-blue-700 font-medium">Voltaje:</span><p className="text-blue-900 font-bold">{line.voltage} kV</p></div>
-                    <div><span className="text-blue-700 font-medium">Capacidad:</span><p className="text-blue-900 font-bold">{line.capacity} MW</p></div>
-                    <div><span className="text-blue-700 font-medium">Flujo Actual:</span><p className="text-blue-900 font-bold">{line.flow} MW</p></div>
-                    <div><span className="text-blue-700 font-medium">Carga:</span><p className={`font-bold ${loadPercent > 90 ? 'text-red-600' : loadPercent > 75 ? 'text-orange-600' : 'text-green-600'}`}>{loadPercent.toFixed(1)}%</p></div>
-                    <div><span className="text-blue-700 font-medium">Estado:</span><p className={`font-bold capitalize ${line.status === 'active' ? 'text-green-600' : line.status === 'overload' ? 'text-red-600' : 'text-orange-600'}`}>{line.status === 'active' ? 'Activa' : line.status === 'overload' ? 'Sobrecarga' : 'Mantenimiento'}</p></div>
-                  </div>
-                </div>
-              );
-            })()}
-            <button onClick={() => { setSelectedBus(null); setSelectedLine(null); }} className="mt-3 text-sm text-blue-600 hover:text-blue-700 font-medium">
-              Cerrar detalles
-            </button>
+            </div>
+          </>
+        ) : (
+          <div className="text-center text-slate-400 text-sm py-8">
+            Selecciona un componente para ver sus detalles
           </div>
         )}
       </div>
 
-      {/* Leyenda */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <h3 className="text-lg font-semibold text-slate-900 mb-4">Leyenda</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div>
-            <h4 className="text-sm font-semibold text-slate-700 mb-3">Tipos de Subestaciones</h4>
-            <div className="space-y-2">
-              <div className="flex items-center gap-3"><div className="w-4 h-4 rounded-full bg-green-500 border-2 border-white"></div><span className="text-sm text-slate-700">Generación</span></div>
-              <div className="flex items-center gap-3"><div className="w-4 h-4 rounded-full bg-purple-500 border-2 border-white"></div><span className="text-sm text-slate-700">Transmisión</span></div>
-              <div className="flex items-center gap-3"><div className="w-4 h-4 rounded-full bg-amber-500 border-2 border-white"></div><span className="text-sm text-slate-700">Distribución</span></div>
-              <div className="flex items-center gap-3"><div className="w-4 h-4 rounded-full bg-red-500 border-2 border-white"></div><span className="text-sm text-slate-700">Carga</span></div>
-            </div>
-          </div>
-          <div>
-            <h4 className="text-sm font-semibold text-slate-700 mb-3">Estado de Líneas</h4>
-            <div className="space-y-2">
-              <div className="flex items-center gap-3"><div className="w-8 h-1 bg-green-500 rounded"></div><span className="text-sm text-slate-700">Normal (&lt; 75%)</span></div>
-              <div className="flex items-center gap-3"><div className="w-8 h-1 bg-orange-500 rounded"></div><span className="text-sm text-slate-700">Carga Alta (75-90%)</span></div>
-              <div className="flex items-center gap-3"><div className="w-8 h-1 bg-red-500 rounded"></div><span className="text-sm text-slate-700">Sobrecarga (&gt; 90%)</span></div>
-              <div className="flex items-center gap-3"><div className="w-8 h-1 bg-amber-500 rounded"></div><span className="text-sm text-slate-700">Mantenimiento</span></div>
-            </div>
-          </div>
-          <div>
-            <h4 className="text-sm font-semibold text-slate-700 mb-3">Niveles de Voltaje</h4>
-            <div className="space-y-2">
-              <div className="flex items-center gap-3"><div className="w-8 h-1.5 bg-slate-700 rounded"></div><span className="text-sm text-slate-700">230 kV (Transmisión)</span></div>
-              <div className="flex items-center gap-3"><div className="w-8 h-1 bg-slate-600 rounded"></div><span className="text-sm text-slate-700">138 kV (Sub-transmisión)</span></div>
-              <div className="flex items-center gap-3"><div className="w-8 h-0.5 bg-slate-500 rounded"></div><span className="text-sm text-slate-700">&lt; 69 kV (Distribución)</span></div>
-            </div>
-          </div>
-        </div>
+      {/* Controles */}
+      <div className="absolute bottom-6 right-6 z-20 bg-white p-3 rounded-xl shadow-lg flex flex-col gap-2">
+        <button onClick={handleZoomIn} className="p-3 hover:bg-slate-100 rounded-lg transition-colors">
+          <ZoomIn size={24} className="text-slate-700" />
+        </button>
+        <button onClick={handleZoomOut} className="p-3 hover:bg-slate-100 rounded-lg transition-colors">
+          <ZoomOut size={24} className="text-slate-700" />
+        </button>
+        <button onClick={handleFitView} className="p-3 hover:bg-slate-100 rounded-lg transition-colors">
+          <Maximize2 size={24} className="text-slate-700" />
+        </button>
       </div>
+
+      {/* Canvas SVG */}
+      <svg
+        ref={svgRef}
+        className="w-full h-full cursor-move"
+        onMouseDown={handlePanStart}
+        onDragOver={handleDragOverCanvas}
+        onDrop={handleDropOnCanvas}
+        style={{ cursor: isPanning ? 'grabbing' : 'grab' }}
+      >
+        <defs>
+          <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
+            <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#cbd5e1" strokeWidth="1" />
+          </pattern>
+        </defs>
+
+        <g transform={`scale(${zoom}) translate(${-viewBox.x}, ${-viewBox.y})`}>
+          <rect x={viewBox.x} y={viewBox.y} width={viewBox.width / zoom} height={viewBox.height / zoom} fill="url(#grid)" />
+
+          {/* Edges */}
+          {edges.map(edge => {
+            const from = getNodePosition(edge.from);
+            const to = getNodePosition(edge.to);
+            const pathId = `path-${edge.id}`;
+            return (
+              <g key={edge.id}>
+                <defs>
+                  <path id={pathId} d={`M ${from.x} ${from.y} L ${to.x} ${to.y}`} fill="none" />
+                </defs>
+                <line
+                  x1={from.x}
+                  y1={from.y}
+                  x2={to.x}
+                  y2={to.y}
+                  stroke="#10b981"
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                />
+                {edge.animated && (
+                  <>
+                    <circle r="7" fill="#fbbf24">
+                      <animateMotion dur="2.5s" repeatCount="indefinite">
+                        <mpath href={`#${pathId}`} />
+                      </animateMotion>
+                    </circle>
+                    <circle r="7" fill="#fbbf24">
+                      <animateMotion dur="2.5s" repeatCount="indefinite" begin="1.25s">
+                        <mpath href={`#${pathId}`} />
+                      </animateMotion>
+                    </circle>
+                  </>
+                )}
+              </g>
+            );
+          })}
+
+          {/* Nodes */}
+          {nodes.map(node => (
+            <g
+              key={node.id}
+              transform={`translate(${node.x}, ${node.y})`}
+              onMouseDown={(e) => handleMouseDown(e, node.id)}
+              style={{ cursor: dragging?.id === node.id ? 'grabbing' : 'grab' }}
+            >
+              {node.type === 'generator' && (
+                <GeneratorSymbol
+                  data={node.data}
+                  selected={selectedNode === node.id}
+                  onClick={() => handleNodeClick(node.id)}
+                />
+              )}
+              {node.type === 'transformer' && (
+                <TransformerSymbol
+                  data={node.data}
+                  selected={selectedNode === node.id}
+                  onClick={() => handleNodeClick(node.id)}
+                />
+              )}
+              {node.type === 'bus' && (
+                <BusSymbol
+                  data={node.data}
+                  selected={selectedNode === node.id}
+                  onClick={() => handleNodeClick(node.id)}
+                />
+              )}
+              {node.type === 'breaker' && (
+                <BreakerSymbol
+                  data={node.data}
+                  selected={selectedNode === node.id}
+                  onClick={() => handleNodeClick(node.id)}
+                  onToggle={() => handleToggleBreaker(node.id)}
+                />
+              )}
+              {node.type === 'load' && (
+                <LoadSymbol
+                  data={node.data}
+                  selected={selectedNode === node.id}
+                  onClick={() => handleNodeClick(node.id)}
+                />
+              )}
+            </g>
+          ))}
+        </g>
+      </svg>
     </div>
   );
 }

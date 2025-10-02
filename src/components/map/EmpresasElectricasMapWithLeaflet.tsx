@@ -681,13 +681,10 @@ const EmpresasElectricasMapWithLeaflet = memo(function EmpresasElectricasMapWith
   useEffect(() => {
     const loadLeaflet = async () => {
       try {
-        if (!document.querySelector('link[href*="leaflet.css"]')) {
-          const link = document.createElement('link');
-          link.rel = 'stylesheet';
-          link.href = 'https://unpkg.com/leaflet@1.7.1/dist/leaflet.css';
-          link.integrity = 'sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A==';
-          link.crossOrigin = '';
-          document.head.appendChild(link);
+        // Import Leaflet CSS from local node_modules instead of CDN
+        if (typeof window !== 'undefined' && !document.querySelector('link[href*="leaflet.css"]')) {
+          // The CSS will be imported via dynamic import below
+          await import('leaflet/dist/leaflet.css');
         }
 
         // Añadir estilos específicos para el contenedor del mapa
