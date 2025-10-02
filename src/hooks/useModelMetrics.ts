@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface ModelConfig {
   id: number;
@@ -39,33 +39,33 @@ export function useModelMetrics(model?: string, category?: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchMetrics = async () => {
-      try {
-        setLoading(true);
-        const params = new URLSearchParams();
-        if (model) params.append('model', model);
-        if (category) params.append('category', category);
-        
-        const response = await fetch(`/api/model-metrics?${params.toString()}`);
-        
-        if (!response.ok) {
-          throw new Error('Error al obtener métricas de modelos');
-        }
-        
-        const result = await response.json();
-        setData(result);
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error desconocido');
-        setData(null);
-      } finally {
-        setLoading(false);
+  const fetchMetrics = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (model) params.append('model', model);
+      if (category) params.append('category', category);
+      
+      const response = await fetch(`/api/model-metrics?${params.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error('Error al obtener métricas de modelos');
       }
-    };
-
-    fetchMetrics();
+      
+      const result = await response.json();
+      setData(result);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error desconocido');
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
   }, [model, category]);
 
-  return { data, loading, error, refetch: () => fetchMetrics() };
+  useEffect(() => {
+    fetchMetrics();
+  }, [fetchMetrics]);
+
+  return { data, loading, error, refetch: fetchMetrics };
 }

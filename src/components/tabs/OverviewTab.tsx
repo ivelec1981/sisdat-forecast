@@ -1,15 +1,41 @@
 'use client'
 
 import React from 'react';
+import dynamic from 'next/dynamic';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { Zap, TrendingUp, Activity, Database } from 'lucide-react';
 import MetricCard from '../dashboard/MetricCard';
-import ModelAccuracyChart from '../metrics/ModelAccuracyChart';
-import ModelComparisonTable from '../metrics/ModelComparisonTable';
-import RealTimeMetrics from '../metrics/RealTimeMetrics';
-import EnhancedTrendChart from '../charts/EnhancedTrendChart';
-import SectorDemandPieChart from '../charts/SectorDemandPieChart';
-import SectorDataChart from '../charts/SectorDataChart';
+import { LoadingSpinner } from '../ui/LoadingSpinner';
+
+// Lazy load heavy chart components
+const ModelAccuracyChart = dynamic(() => import('../metrics/ModelAccuracyChart'), {
+  loading: () => <LoadingSpinner />,
+  ssr: false
+});
+
+const ModelComparisonTable = dynamic(() => import('../metrics/ModelComparisonTable'), {
+  loading: () => <LoadingSpinner />
+});
+
+const RealTimeMetrics = dynamic(() => import('../metrics/RealTimeMetrics'), {
+  loading: () => <LoadingSpinner />,
+  ssr: false
+});
+
+const EnhancedTrendChart = dynamic(() => import('../charts/EnhancedTrendChart'), {
+  loading: () => <LoadingSpinner />,
+  ssr: false
+});
+
+const SectorDemandPieChart = dynamic(() => import('../charts/SectorDemandPieChart'), {
+  loading: () => <LoadingSpinner />,
+  ssr: false
+});
+
+const SectorDataChart = dynamic(() => import('../charts/SectorDataChart'), {
+  loading: () => <LoadingSpinner />,
+  ssr: false
+});
 import { ProjectionData } from '@/types/dashboard';
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
 import { useModelMetrics } from '@/hooks/useModelMetrics';

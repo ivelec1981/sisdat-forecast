@@ -240,8 +240,8 @@ export default function MFAVerificationModal({
     } catch (error) {
       console.error('❌ MFA verification error:', error);
       console.error('❌ Error details:', { 
-        message: error?.message || 'No message', 
-        stack: error?.stack || 'No stack',
+        message: error instanceof Error ? error.message : 'No message', 
+        stack: error instanceof Error ? error.stack : 'No stack',
         type: typeof error,
         stringified: JSON.stringify(error, null, 2)
       });
@@ -364,7 +364,7 @@ export default function MFAVerificationModal({
                   {Array.from({ length: 6 }, (_, index) => (
                     <motion.input
                       key={index}
-                      ref={(el) => inputRefs.current[index] = el}
+                      ref={(el) => { inputRefs.current[index] = el; }}
                       type="text"
                       inputMode="numeric"
                       maxLength={1}

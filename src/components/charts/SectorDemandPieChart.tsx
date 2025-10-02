@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { TrendingUp, Zap, Calendar } from 'lucide-react';
 import { useSectorData } from '@/hooks/useSectorData';
@@ -10,7 +10,7 @@ interface SectorDemandPieChartProps {
   height?: number;
 }
 
-export default function SectorDemandPieChart({ 
+const SectorDemandPieChart = React.memo(function SectorDemandPieChart({ 
   title = "Participación por Sector",
   height = 400 
 }: SectorDemandPieChartProps) {
@@ -19,6 +19,49 @@ export default function SectorDemandPieChart({
   const [yearMode, setYearMode] = useState<'historical' | 'projected'>('historical');
   
   const { data: sectorData, loading } = useSectorData(dataType);
+
+  // Memoize computed values
+  const currentData = useMemo(() => {
+    if (!sectorData) return [];
+    return yearMode === 'historical' ? sectorData.historical : sectorData.projected;
+  }, [sectorData, yearMode]);
+
+  const currentYear = useMemo(() => {
+    if (!sectorData) return '';
+    return yearMode === 'historical' ? sectorData.historicalYear : sectorData.projectedYear;
+  }, [sectorData, yearMode]);
+
+  const totalValue = useMemo(() => {
+    return currentData.reduce((sum, item) => sum + item.value, 0);
+  }, [currentData]);
+
+  // Memoize event handlers
+  const handleDataTypeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    setDataType(e.target.value as 'energy' | 'power');
+  }, []);
+
+  const handleViewModeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    setViewMode(e.target.value as 'pie' | 'bar');
+  }, []);
+
+  const handleYearModeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    setYearMode(e.target.value as 'historical' | 'projected');
+  }, []);
+
+  // Memoize tooltip formatter
+  const formatTooltip = useCallback((value: number, name: string, props: any) => {
+    const percentage = props.payload.percentage;
+    const unit = sectorData?.unit || '';
+    return [
+      `${value.toFixed(1)} ${unit} (${percentage.toFixed(1)}%)`,
+      name
+    ];
+  }, [sectorData?.unit]);
+
+  // Memoize custom label function
+  const CustomLabel = useCallback((entry: any) => {
+    return `${entry.name}: ${entry.percentage.toFixed(1)}%`;
+  }, []);
 
   if (loading) {
     return (
@@ -42,22 +85,6 @@ export default function SectorDemandPieChart({
     );
   }
 
-  const currentData = yearMode === 'historical' ? sectorData.historical : sectorData.projected;
-  const currentYear = yearMode === 'historical' ? sectorData.historicalYear : sectorData.projectedYear;
-
-  const formatTooltip = (value: number, name: string, props: any) => {
-    const percentage = props.payload.percentage;
-    const unit = sectorData.unit;
-    return [
-      `${value.toFixed(1)} ${unit} (${percentage.toFixed(1)}%)`,
-      name
-    ];
-  };
-
-  const CustomLabel = (entry: any) => {
-    return `${entry.name}: ${entry.percentage.toFixed(1)}%`;
-  };
-
   return (
     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
       {/* Header con controles */}
@@ -74,7 +101,7 @@ export default function SectorDemandPieChart({
           {/* Selector de tipo de dato */}
           <select
             value={dataType}
-            onChange={(e) => setDataType(e.target.value as 'energy' | 'power')}
+            onChange={handleDataTypeChange}
             className="px-3 py-1 text-sm border border-slate-300 rounded-md bg-white dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200"
           >
             <option value="energy">Energía (MWh)</option>
@@ -84,7 +111,7 @@ export default function SectorDemandPieChart({
           {/* Selector de vista */}
           <select
             value={viewMode}
-            onChange={(e) => setViewMode(e.target.value as 'pie' | 'bar')}
+            onChange={handleViewModeChange}
             className="px-3 py-1 text-sm border border-slate-300 rounded-md bg-white dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200"
           >
             <option value="pie">Gráfico Circular</option>
@@ -94,7 +121,7 @@ export default function SectorDemandPieChart({
           {/* Selector de período */}
           <select
             value={yearMode}
-            onChange={(e) => setYearMode(e.target.value as 'historical' | 'projected')}
+            onChange={handleYearModeChange}
             className="px-3 py-1 text-sm border border-slate-300 rounded-md bg-white dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200"
           >
             <option value="historical">Último Histórico ({sectorData.historicalYear})</option>
@@ -181,7 +208,7 @@ export default function SectorDemandPieChart({
         <div className="flex items-center gap-1">
           <TrendingUp className="w-3 h-3" />
           <span>
-            Total: {currentData.reduce((sum, item) => sum + item.value, 0).toFixed(0)} {sectorData.unit}
+            Total: {totalValue.toFixed(0)} {sectorData.unit}
           </span>
         </div>
         <div className="flex items-center gap-1">
@@ -193,4 +220,6 @@ export default function SectorDemandPieChart({
       </div>
     </div>
   );
-}
+});
+
+export default SectorDemandPieChart;

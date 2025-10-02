@@ -40,7 +40,13 @@ export default function EnhancedTrendChart({
       case 'monthly':
         if (dataType === 'power') {
           // Para potencia, mostrar datos anuales (no hay granularidad mensual)
-          const allAnnualData = [];
+          const allAnnualData: Array<{
+            period: string;
+            demanda: number;
+            type: string;
+            sortKey: number;
+            isHistorical: boolean;
+          }> = [];
           
           // Agregar todos los datos históricos
           trendsData.monthlyTrends.historical.forEach(item => {
@@ -69,7 +75,13 @@ export default function EnhancedTrendChart({
           return allAnnualData.sort((a, b) => a.sortKey - b.sortKey);
         } else {
           // Para energía, usar datos mensuales como antes
-          const allMonthlyData = [];
+          const allMonthlyData: Array<{
+            period: string;
+            demanda: number;
+            type: string;
+            sortKey: number;
+            isHistorical: boolean;
+          }> = [];
           
           // Agregar todos los datos históricos
           trendsData.monthlyTrends.historical.forEach(item => {
@@ -112,7 +124,13 @@ export default function EnhancedTrendChart({
 
       case 'annual':
         // Combinar datos históricos y proyectados como una serie continua
-        const allAnnualData = [];
+        const allAnnualData: Array<{
+          period: string;
+          demanda: number;
+          type: string;
+          sortKey: number;
+          isHistorical: boolean;
+        }> = [];
         
         // Agregar todos los datos históricos
         trendsData.annualTrends.historical.forEach(item => {

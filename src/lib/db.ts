@@ -4,10 +4,61 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+export const prisma = globalForPrisma.prisma ?? new PrismaClient({
+  log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+});
 
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
+}
+
+// Cache helper with TTL for query optimization
+export class QueryCache {
+  private static cache = new Map<string, { data: any; timestamp: number }>();
+  private static defaultTTL = 5 * 60 * 1000; // 5 minutes
+
+  static get<T>(key: string): T | null {
+    const cached = this.cache.get(key);
+    if (!cached) return null;
+
+    const now = Date.now();
+    if (now - cached.timestamp > this.defaultTTL) {
+      this.cache.delete(key);
+      return null;
+    }
+
+    return cached.data as T;
+  }
+
+  static set(key: string, data: any, ttl?: number): void {
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now(),
+    });
+
+    // Auto-cleanup after TTL
+    setTimeout(() => {
+      this.cache.delete(key);
+    }, ttl || this.defaultTTL);
+  }
+
+  static clear(pattern?: string): void {
+    if (!pattern) {
+      this.cache.clear();
+      return;
+    }
+
+    // Clear keys matching pattern
+    for (const key of this.cache.keys()) {
+      if (key.includes(pattern)) {
+        this.cache.delete(key);
+      }
+    }
+  }
+
+  static invalidate(keys: string[]): void {
+    keys.forEach(key => this.cache.delete(key));
+  }
 }
 
 // Funciones helper para consultas comunes

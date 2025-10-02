@@ -1,15 +1,33 @@
 'use client'
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import dynamic from 'next/dynamic';
 
 import Sidebar from './Sidebar';
 import Header from './Header';
-import OverviewTab from '../tabs/OverviewTab';
-import ProjectionsTab from '../tabs/ProjectionsTab';
-import TransmissionMapTab from '../tabs/TransmissionMapTab';
-import SingleLineDiagramTab from '../tabs/SingleLineDiagramTab';
-import DocumentationTab from '../tabs/DocumentationTab';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+
+// Lazy load tabs with loading fallback
+const OverviewTab = dynamic(() => import('../tabs/OverviewTab'), {
+  loading: () => <LoadingSpinner />,
+});
+
+const ProjectionsTab = dynamic(() => import('../tabs/ProjectionsTab'), {
+  loading: () => <LoadingSpinner />,
+});
+
+const TransmissionMapTab = dynamic(() => import('../tabs/TransmissionMapTab'), {
+  loading: () => <LoadingSpinner />,
+});
+
+const SingleLineDiagramTab = dynamic(() => import('../tabs/SingleLineDiagramTab'), {
+  loading: () => <LoadingSpinner />,
+});
+
+const DocumentationTab = dynamic(() => import('../tabs/DocumentationTab'), {
+  loading: () => <LoadingSpinner />,
+});
 
 import { projectionData, transmissionData } from '@/lib/data';
 import { Station } from '@/types/dashboard';
@@ -36,21 +54,39 @@ export default function SisdatForecastDashboard() {
     const content = (() => {
       switch (activeTab) {
         case 'overview':
-          return <OverviewTab projectionData={projectionData} />;
+          return (
+            <Suspense fallback={<LoadingSpinner />}>
+              <OverviewTab projectionData={projectionData} />
+            </Suspense>
+          );
         case 'projections':
-          return <ProjectionsTab />;
+          return (
+            <Suspense fallback={<LoadingSpinner />}>
+              <ProjectionsTab />
+            </Suspense>
+          );
         case 'transmission-map':
           return (
-            <TransmissionMapTab
-              transmissionData={transmissionData}
-              selectedStation={selectedStation}
-              setSelectedStation={setSelectedStation}
-            />
+            <Suspense fallback={<LoadingSpinner />}>
+              <TransmissionMapTab
+                transmissionData={transmissionData}
+                selectedStation={selectedStation}
+                setSelectedStation={setSelectedStation}
+              />
+            </Suspense>
           );
         case 'single-line-diagram':
-          return <SingleLineDiagramTab />;
+          return (
+            <Suspense fallback={<LoadingSpinner />}>
+              <SingleLineDiagramTab />
+            </Suspense>
+          );
         case 'documentation':
-          return <DocumentationTab />;
+          return (
+            <Suspense fallback={<LoadingSpinner />}>
+              <DocumentationTab />
+            </Suspense>
+          );
         default:
           return (
             <motion.div 

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { ThemeProvider } from '@/contexts/ThemeContext'
+import { WebVitals } from './web-vitals'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -74,15 +75,51 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              if ('serviceWorker' in navigator) {
+              // Only enable Service Worker in production
+              if ('serviceWorker' in navigator && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
                 window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                  navigator.serviceWorker.register('/sw.js', {
+                    scope: '/',
+                    updateViaCache: 'none' // Force SW update check on every page load
+                  })
                     .then(function(registration) {
-                      console.log('SW registered: ', registration);
+                      console.log('[SW] Registered successfully:', registration.scope);
+
+                      // Check for updates every 60 seconds
+                      setInterval(function() {
+                        registration.update();
+                      }, 60000);
+
+                      // Handle SW updates
+                      registration.addEventListener('updatefound', function() {
+                        const newWorker = registration.installing;
+                        console.log('[SW] Update found, installing new version...');
+
+                        newWorker.addEventListener('statechange', function() {
+                          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            console.log('[SW] New version installed, refresh to activate');
+                            // Optionally show notification to user
+                          }
+                        });
+                      });
                     })
                     .catch(function(registrationError) {
-                      console.log('SW registration failed: ', registrationError);
+                      console.error('[SW] Registration failed:', registrationError);
                     });
+
+                  // Handle controller change (new SW activated)
+                  navigator.serviceWorker.addEventListener('controllerchange', function() {
+                    console.log('[SW] Controller changed, reloading page...');
+                    window.location.reload();
+                  });
+                });
+              } else if ('serviceWorker' in navigator) {
+                // In development, unregister any existing service workers
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                  for(let registration of registrations) {
+                    registration.unregister();
+                    console.log('[SW] Unregistered service worker in development mode');
+                  }
                 });
               }
             `,
@@ -90,6 +127,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans">
+        <WebVitals />
         <ThemeProvider>
           {children}
         </ThemeProvider>

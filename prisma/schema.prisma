@@ -24,6 +24,9 @@ model Company {
   // Relaciones
   energyRecords     EnergyRecord[]
   transmissionData  TransmissionStation[]
+  multiHorizonProjections MultiHorizonProjection[]
+  typicalLoadProfiles TypicalLoadProfile[]
+  technicalLossProjections TechnicalLossProjection[]
   
   @@map("companies")
 }
@@ -254,4 +257,164 @@ model PublicLightingData {
   
   @@unique([powerCompany, date, type])
   @@map("public_lighting_data")
+}
+
+// Modelo para proyecciones multi-horizonte
+model MultiHorizonProjection {
+  id              Int      @id @default(autoincrement())
+  companyId       Int
+  sector          String   // residential, commercial, industrial, public_lighting, others
+  timeHorizon     String   // short_term, medium_term, long_term
+  targetYear      Int
+  targetMonth     Int?
+  
+  // Modelos y predicciones
+  selectedModel   String   // modelo seleccionado por el registry
+  confidence      Float    // confianza de la selección (0-1)
+  
+  // Predicciones por modelo
+  prophetValue    Float?
+  gruValue        Float?
+  wavenetValue    Float?
+  gbrValue        Float?
+  ensembleValue   Float?
+  sarimaxValue    Float?
+  econometricValue Float?
+  hybridBottomUpValue Float?
+  hybridTopDownValue Float?
+  
+  // Metadatos
+  modelReasoning  String?  // razones de selección del modelo
+  assumptions     Json?    // supuestos utilizados
+  dataQuality     String   // high, medium, low
+  
+  // Reconciliación IPF
+  isReconciled    Boolean  @default(false)
+  reconciledValue Float?   // valor después de IPF
+  ipfIterations   Int?     // iteraciones de convergencia
+  ipfError        Float?   // error final de IPF
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relaciones
+  company         Company  @relation(fields: [companyId], references: [id])
+  
+  @@unique([companyId, sector, timeHorizon, targetYear, targetMonth])
+  @@map("multi_horizon_projections")
+}
+
+// Modelo para perfiles típicos de carga
+model TypicalLoadProfile {
+  id              String   @id // UUID generado por TLPEngine
+  sector          String   // residential, commercial, industrial, etc.
+  region          String   // Costa, Sierra, Oriente, Galápagos
+  companyId       Int
+  dayType         String   // weekday, saturday, sunday
+  season          String   // dry, rainy
+  
+  // Datos del perfil (24 puntos horarios)
+  profileData     Json     // Array de LoadProfilePoint
+  
+  // Metadatos del clustering
+  clusterSize     Int      // número de días en el cluster
+  silhouetteScore Float    // calidad del clustering
+  representativeness Float // qué tan representativo es (0-1)
+  dataQuality     String   // high, medium, low
+  avgTemperature  Float?   // temperatura promedio
+  avgHumidity     Float?   // humedad promedio
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relaciones
+  company         Company  @relation(fields: [companyId], references: [id])
+  
+  @@unique([sector, region, companyId, dayType, season])
+  @@map("typical_load_profiles")
+}
+
+// Modelo para pérdidas técnicas
+model TechnicalLossProjection {
+  id              Int      @id @default(autoincrement())
+  companyId       Int
+  region          String
+  voltageLevel    String   // transmission, subtransmission, distribution_mv, distribution_lv
+  projectionYear  Int
+  projectionMonth Int?
+  
+  // Pérdidas fijas
+  fixedLossPercentage    Float
+  fixedLossAbsolute      Float    // MWh
+  coronaLosses          Float    // componente corona
+  insulationLosses      Float    // componente aislamiento
+  noLoadLosses          Float    // componente sin carga
+  
+  // Pérdidas variables
+  variableLossPercentage Float
+  variableLossAbsolute   Float    // MWh
+  jouleLosses           Float    // pérdidas Joule
+  loadTransformerLosses Float    // transformadores con carga
+  reactiveLosses        Float    // potencia reactiva
+  
+  // Pérdidas totales
+  totalLossPercentage   Float
+  totalLossAbsolute     Float    // MWh
+  regulatoryLimit       Float?   // límite regulatorio (%)
+  compliance           Boolean  // cumple límite regulatorio
+  
+  // Metadatos
+  confidence           Float    // confianza de la proyección (0-1)
+  methodology          String   // metodología utilizada
+  assumptions          Json     // supuestos del modelo
+  
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  
+  // Relaciones
+  company              Company  @relation(fields: [companyId], references: [id])
+  
+  @@unique([companyId, voltageLevel, projectionYear, projectionMonth])
+  @@map("technical_loss_projections")
+}
+
+// Modelo para configuración de actores institucionales
+model InstitutionalActor {
+  id              Int      @id @default(autoincrement())
+  actorType       String   // ARCONEL, MEM, CELEC, CENACE, CNEL, EMPRESA_ELECTRICA
+  displayName     String
+  
+  // Permisos
+  canViewNationalData     Boolean @default(false)
+  canViewRegionalData     Boolean @default(false)
+  canViewCompanyData      Boolean @default(false)
+  canViewTechnicalLosses  Boolean @default(false)
+  canViewProjections      Boolean @default(false)
+  canExportData          Boolean @default(false)
+  canModifyParameters    Boolean @default(false)
+  canViewSensitiveMetrics Boolean @default(false)
+  
+  // Restricciones
+  allowedCompanies       Json?    // array de company IDs permitidos
+  allowedRegions         Json?    // array de regiones permitidas
+  maxDataRetention       Int      // días de retención máxima
+  
+  // Configuración de interfaz
+  primaryColor           String   // color principal del tema
+  logoUrl               String?  // URL del logo
+  brandName             String   // nombre de marca
+  
+  // Layout del dashboard
+  showNationalOverview   Boolean @default(false)
+  showRegionalBreakdown  Boolean @default(false)
+  showCompanyDetails     Boolean @default(false)
+  showTechnicalIndicators Boolean @default(false)
+  showRegulatoryMetrics  Boolean @default(false)
+  prioritySections       Json?    // array de secciones prioritarias
+  
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  
+  @@unique([actorType])
+  @@map("institutional_actors")
 }

@@ -57,6 +57,14 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     placeholder,
     value,
     id,
+    onDrag,
+    onDragEnd,
+    onDragStart,
+    onDrop,
+    onAnimationStart,
+    onAnimationEnd,
+    onAnimationIteration,
+    onTransitionEnd,
     ...props 
   }, ref) => {
     const [showPassword, setShowPassword] = useState(false);

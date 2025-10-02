@@ -92,7 +92,7 @@ export function AppleResponsiveLayout({
         animate: { opacity: 1, scale: 1, y: 0 },
         exit: { opacity: 0, scale: 0.95, y: 20 },
         transition: { 
-          type: 'spring',
+          type: 'spring' as const,
           stiffness: 300,
           damping: 30,
           mass: 0.8
@@ -112,7 +112,7 @@ export function AppleResponsiveLayout({
           ? { y: '100%' } 
           : { x: '-100%' },
         transition: {
-          type: 'spring',
+          type: 'spring' as const,
           stiffness: 300,
           damping: 30,
         },
@@ -124,7 +124,7 @@ export function AppleResponsiveLayout({
       animate: { opacity: 1, y: 0 },
       transition: { 
         duration: 0.3,
-        ease: [0.4, 0, 0.2, 1]
+        ease: [0.4, 0, 0.2, 1] as const
       },
     };
   };

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 
 interface DashboardMetrics {
   summary: {
@@ -54,34 +54,61 @@ export function useDashboardMetrics() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchMetrics = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/dashboard-metrics');
-        
-        if (!response.ok) {
-          throw new Error('Error al obtener métricas del dashboard');
-        }
-        
-        const result = await response.json();
-        setData(result);
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error desconocido');
-        setData(null);
-      } finally {
-        setLoading(false);
+  const fetchMetrics = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/dashboard-metrics');
+      
+      if (!response.ok) {
+        throw new Error('Error al obtener métricas del dashboard');
       }
-    };
+      
+      const result = await response.json();
+      setData(result);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error desconocido');
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
+  useEffect(() => {
     fetchMetrics();
     
     // Actualizar cada 5 minutos
     const interval = setInterval(fetchMetrics, 5 * 60 * 1000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchMetrics]);
 
-  return { data, loading, error, refetch: () => fetchMetrics() };
+  // Memoize processed data to avoid unnecessary re-calculations
+  const processedData = useMemo(() => {
+    if (!data) return null;
+    
+    return {
+      ...data,
+      // Process monthly trends for better performance
+      monthlyTrendsMap: data.monthlyTrends.reduce((acc, trend) => {
+        if (!acc[trend.model]) acc[trend.model] = [];
+        acc[trend.model].push(trend);
+        return acc;
+      }, {} as Record<string, typeof data.monthlyTrends>),
+      
+      // Process sector data for quick access
+      sectorDataMap: data.sectorData.reduce((acc, sector) => {
+        if (!acc[sector.category]) acc[sector.category] = [];
+        acc[sector.category].push(sector);
+        return acc;
+      }, {} as Record<string, typeof data.sectorData>),
+    };
+  }, [data]);
+
+  return { 
+    data: processedData, 
+    loading, 
+    error, 
+    refetch: fetchMetrics 
+  };
 }

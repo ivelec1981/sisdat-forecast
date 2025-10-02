@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Limpiar Service Worker - SISDAT Forecast</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 500px;
+      width: 100%;
+      padding: 40px;
+      text-align: center;
+    }
+
+    .icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-bottom: 12px;
+      color: #1a202c;
+    }
+
+    p {
+      color: #718096;
+      margin-bottom: 30px;
+      line-height: 1.6;
+    }
+
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 14px 32px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      width: 100%;
+      margin-bottom: 12px;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button.secondary {
+      background: #e2e8f0;
+      color: #4a5568;
+    }
+
+    button.secondary:hover {
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    }
+
+    #status {
+      margin-top: 20px;
+      padding: 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      display: none;
+    }
+
+    #status.success {
+      background: #c6f6d5;
+      color: #22543d;
+      display: block;
+    }
+
+    #status.error {
+      background: #fed7d7;
+      color: #742a2a;
+      display: block;
+    }
+
+    #status.info {
+      background: #bee3f8;
+      color: #2c5282;
+      display: block;
+    }
+
+    .details {
+      margin-top: 30px;
+      padding-top: 30px;
+      border-top: 1px solid #e2e8f0;
+      text-align: left;
+    }
+
+    .details h2 {
+      font-size: 18px;
+      margin-bottom: 12px;
+      color: #2d3748;
+    }
+
+    .details ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .details li {
+      padding: 8px 0;
+      color: #4a5568;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+    }
+
+    .details li::before {
+      content: '✓';
+      color: #48bb78;
+      font-weight: bold;
+      margin-right: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">🧹</div>
+    <h1>Limpiar Service Worker</h1>
+    <p>Utiliza esta herramienta para limpiar el Service Worker y el cache de SISDAT Forecast. Útil cuando experimentas problemas con chunks dinámicos.</p>
+
+    <button onclick="clearServiceWorker()">🗑️ Limpiar Service Worker</button>
+    <button onclick="clearCache()" class="secondary">🧽 Limpiar Cache</button>
+    <button onclick="clearAll()" class="secondary">🔄 Limpiar Todo y Recargar</button>
+
+    <div id="status"></div>
+
+    <div class="details">
+      <h2>¿Cuándo usar esto?</h2>
+      <ul>
+        <li>Errores "Failed to fetch" en chunks dinámicos</li>
+        <li>ChunkLoadError en componentes lazy-loaded</li>
+        <li>Assets obsoletos en cache</li>
+        <li>Problemas después de actualizar la aplicación</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    function showStatus(message, type) {
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = message;
+      statusEl.className = type;
+    }
+
+    async function clearServiceWorker() {
+      try {
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+
+          if (registrations.length === 0) {
+            showStatus('✓ No hay Service Workers registrados', 'info');
+            return;
+          }
+
+          for (let registration of registrations) {
+            await registration.unregister();
+          }
+
+          showStatus(`✓ ${registrations.length} Service Worker(s) eliminado(s)`, 'success');
+          console.log('[Clear SW] Service Workers unregistered:', registrations.length);
+        } else {
+          showStatus('⚠️ Service Worker no está disponible en este navegador', 'error');
+        }
+      } catch (error) {
+        console.error('[Clear SW] Error:', error);
+        showStatus('❌ Error al eliminar Service Worker: ' + error.message, 'error');
+      }
+    }
+
+    async function clearCache() {
+      try {
+        if ('caches' in window) {
+          const cacheNames = await caches.keys();
+
+          if (cacheNames.length === 0) {
+            showStatus('✓ No hay caches para limpiar', 'info');
+            return;
+          }
+
+          for (let cacheName of cacheNames) {
+            await caches.delete(cacheName);
+          }
+
+          showStatus(`✓ ${cacheNames.length} cache(s) eliminado(s)`, 'success');
+          console.log('[Clear SW] Caches deleted:', cacheNames);
+        } else {
+          showStatus('⚠️ Cache API no está disponible en este navegador', 'error');
+        }
+      } catch (error) {
+        console.error('[Clear SW] Error:', error);
+        showStatus('❌ Error al limpiar cache: ' + error.message, 'error');
+      }
+    }
+
+    async function clearAll() {
+      try {
+        showStatus('🔄 Limpiando todo...', 'info');
+
+        // Unregister service workers
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (let registration of registrations) {
+            await registration.unregister();
+          }
+          console.log('[Clear SW] Service Workers unregistered:', registrations.length);
+        }
+
+        // Clear caches
+        if ('caches' in window) {
+          const cacheNames = await caches.keys();
+          for (let cacheName of cacheNames) {
+            await caches.delete(cacheName);
+          }
+          console.log('[Clear SW] Caches deleted:', cacheNames.length);
+        }
+
+        // Clear localStorage (optional - commented out to preserve user preferences)
+        // localStorage.clear();
+
+        // Clear sessionStorage
+        sessionStorage.clear();
+
+        showStatus('✓ Todo limpiado, recargando página...', 'success');
+
+        // Reload page after 1 second
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 1000);
+
+      } catch (error) {
+        console.error('[Clear SW] Error:', error);
+        showStatus('❌ Error: ' + error.message, 'error');
+      }
+    }
+
+    // Show current status on load
+    window.addEventListener('load', async () => {
+      try {
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          const cacheNames = 'caches' in window ? await caches.keys() : [];
+
+          console.log('[Clear SW] Current status:');
+          console.log('  - Service Workers:', registrations.length);
+          console.log('  - Caches:', cacheNames.length);
+
+          if (registrations.length > 0) {
+            registrations.forEach((reg, i) => {
+              console.log(`  - SW ${i + 1}:`, reg.scope);
+            });
+          }
+
+          if (cacheNames.length > 0) {
+            console.log('  - Cache names:', cacheNames);
+          }
+        }
+      } catch (error) {
+        console.error('[Clear SW] Error checking status:', error);
+      }
+    });
+  </script>
+</body>
+</html>
